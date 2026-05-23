@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinanciApp — Buscador de financiación pública</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#1a1a18; --ink-soft:#5a5a55; --ink-muted:#9a9a92;
+    --bg:#f5f3ee; --bg-card:#ffffff;
+    --border:rgba(26,26,24,.10); --border-md:rgba(26,26,24,.18);
+    --eu:#1a4fa0; --eu-bg:#e8f0fc;
+    --nac:#1a6b3a; --nac-bg:#e6f4eb;
+    --loc:#8a4a00; --loc-bg:#fdf0e0;
+    --open:#146b38; --open-bg:#e4f5ec;
+    --soon:#8a5a00; --soon-bg:#fef3d9;
+    --closed:#6b1414; --closed-bg:#fde8e8;
+    --accent:#c8602a;
+    --r:10px; --rlg:16px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+  /* NAV */
+  nav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:500}
+  .logo span{color:var(--accent)}
+  .nav-links{display:flex;gap:1.5rem;align-items:center}
+  .nav-links a{font-size:13px;color:var(--ink-soft);text-decoration:none;transition:color .15s}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-btn{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:opacity .15s}
+  .nav-btn:hover{opacity:.82}
+
+  /* HERO */
+  .hero{padding:4rem 2rem 3rem;text-align:center;max-width:760px;margin:0 auto}
+  .eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:rgba(200,96,42,.08);padding:4px 12px;border-radius:20px;margin-bottom:1.25rem}
+  .hero h1{font-family:'Fraunces',serif;font-size:clamp(30px,5vw,50px);font-weight:300;line-height:1.15;margin-bottom:1rem}
+  .hero h1 em{font-style:italic;color:var(--accent)}
+  .hero p{font-size:16px;color:var(--ink-soft);line-height:1.7;margin-bottom:2rem}
+  .stats{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+  .stat-num{font-family:'Fraunces',serif;font-size:28px;font-weight:400;display:block}
+  .stat-lbl{font-size:12px;color:var(--ink-muted)}
+
+  /* SEARCH */
+  .search-wrap{max-width:880px;margin:0 auto;padding:1.5rem 1.5rem 2.5rem}
+  .search-box{background:var(--bg-card);border-radius:var(--rlg);border:1px solid var(--border);padding:1.25rem;box-shadow:var(--shadow)}
+  .search-row{display:flex;gap:8px;margin-bottom:1rem}
+  .sinput{flex:1;height:44px;border:1px solid var(--border-md);border-radius:8px;padding:0 14px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--bg);outline:none;transition:border-color .15s}
+  .sinput:focus{border-color:var(--accent)}
+  .sbtn{height:44px;padding:0 20px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s;display:flex;align-items:center;gap:6px}
+  .sbtn:hover{opacity:.82}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .fsel{height:36px;border:1px solid var(--border-md);border-radius:8px;padding:0 12px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--bg);cursor:pointer;outline:none;transition:border-color .15s}
+  .fsel:focus{border-color:var(--accent)}
+
+  /* MAIN */
+  .main{max-width:880px;margin:0 auto;padding:0 1.5rem 4rem}
+  .slabel{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-muted);margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between}
+  .slabel small{font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-muted)}
+
+  /* STATUS */
+  .status-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--ink-soft)}
+  .dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
+  .dot.loading{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+  .dot.error{background:#ef4444}
+  .dot.warn{background:#f59e0b}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* SOURCE TABS */
+  .tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+  .tab{height:32px;padding:0 14px;border:1px solid var(--border-md);border-radius:20px;background:var(--bg-card);font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:5px}
+  .tab:hover{border-color:var(--ink);color:var(--ink)}
+  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .tab .cnt{background:rgba(255,255,255,.25);border-radius:10px;padding:1px 6px;font-size:11px}
+  .tab:not(.active) .cnt{background:var(--bg);color:var(--ink-muted)}
+  .tab .err{font-size:11px;color:#d97706;margin-left:2px}
+
+  /* CARDS */
+  .cards{display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.125rem 1.25rem;display:flex;gap:14px;cursor:pointer;transition:border-color .15s,transform .1s}
+  .card:hover{border-color:var(--border-md);transform:translateY(-1px)}
+  .cicon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:-.5px}
+  .i-eu{background:var(--eu-bg);color:var(--eu)}
+  .i-nac{background:var(--nac-bg);color:var(--nac)}
+  .i-loc{background:var(--loc-bg);color:var(--loc)}
+  .cbody{flex:1;min-width:0}
+  .cheader{display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+  .ctitle{font-size:14px;font-weight:500;color:var(--ink);line-height:1.4;flex:1}
+  .badges{display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .b-eu{background:var(--eu-bg);color:var(--eu)}
+  .b-nac{background:var(--nac-bg);color:var(--nac)}
+  .b-loc{background:var(--loc-bg);color:var(--loc)}
+  .b-open{background:var(--open-bg);color:var(--open)}
+  .b-soon{background:var(--soon-bg);color:var(--soon)}
+  .b-closed{background:var(--closed-bg);color:var(--closed)}
+  .cmeta{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-muted);margin-top:4px}
+  .cright{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+  .camount{font-family:'Fraunces',serif;font-size:15px;font-weight:400}
+  .camount-lbl{font-size:11px;color:var(--ink-muted)}
+  .clink{font-size:11px;color:var(--accent);text-decoration:none;margin-top:2px}
+  .clink:hover{text-decoration:underline}
+  .empty{text-align:center;padding:3rem 1rem;color:var(--ink-muted);font-size:14px;background:var(--bg-card);border-radius:var(--rlg);border:1px solid var(--border)}
+  .empty strong{display:block;font-size:16px;color:var(--ink-soft);margin-bottom:.5rem}
+  .skel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.125rem 1.25rem;margin-bottom:10px}
+  .skel-l{height:12px;border-radius:6px;background:var(--bg);animation:shimmer 1.4s ease-in-out infinite}
+  @keyframes shimmer{0%,100%{opacity:1}50%{opacity:.5}}
+
+  /* MODAL */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
+  .overlay.open{display:flex}
+  .modal{background:var(--bg-card);border-radius:var(--rlg);max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:2rem;position:relative}
+  .modal-x{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-muted);line-height:1;font-family:sans-serif}
+  .modal-x:hover{color:var(--ink)}
+  .modal h2{font-family:'Fraunces',serif;font-size:20px;font-weight:400;margin-bottom:1rem;line-height:1.3}
+  .mrow{display:flex;gap:8px;font-size:13px;margin-bottom:6px}
+  .mrow .lbl{color:var(--ink-muted);min-width:110px;flex-shrink:0}
+  .mrow .val{color:var(--ink);font-weight:500}
+  .mdesc{font-size:14px;color:var(--ink-soft);line-height:1.7;border-top:1px solid var(--border);padding-top:1rem;margin:1rem 0}
+  .mactions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem}
+  .btn-p{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}
+  .btn-p:hover{opacity:.82}
+  .btn-s{background:none;color:var(--ink);border:1px solid var(--border-md);border-radius:8px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+  .btn-s:hover{background:var(--bg)}
+  .xml-wrap{border-top:1px solid var(--border);padding-top:1.25rem}
+  .xml-wrap h3{font-size:13px;font-weight:500;margin-bottom:.75rem;color:var(--ink)}
+  .xml-block{background:#1e1e1e;color:#d4d4d4;font-family:'Courier New',monospace;font-size:11.5px;padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.8;white-space:pre;max-height:340px;overflow-y:auto}
+  .xt{color:#4ec9b0}.xa{color:#9cdcfe}.xv{color:#ce9178}
+
+  /* FEED / ALERTAS */
+  .infobox{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem 1.5rem;display:flex;gap:14px}
+  .iicon{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .alert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+
+  footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:12px;color:var(--ink-muted)}
+  footer a{color:var(--ink-muted);text-decoration:none}
+  footer a:hover{color:var(--ink)}
+
+  @media(max-width:600px){
+    .search-row,.alert-grid{flex-direction:column}
+    .alert-grid{grid-template-columns:1fr}
+    .card{flex-direction:column;gap:10px}
+    .cright{text-align:left;align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Financi<span>App</span></div>
+  <div class="nav-links">
+    <a href="#buscador">Convocatorias</a>
+    <a href="#feed">Feed XML</a>
+    <a href="#alertas">Alertas</a>
+    <button class="nav-btn" onclick="ir('alertas')">Registrarme</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow">&#9679; Datos en tiempo real · Fuentes oficiales</div>
+  <h1>Encuentra la <em>financiación pública</em><br>que tu entidad necesita</h1>
+  <p>Convocatorias del BOE (canal Ayudas + Sección III), Comisión Europea y GVA/DOGV — consultadas directamente desde sus fuentes oficiales.</p>
+  <div class="stats">
+    <div><span class="stat-num" id="s-total">—</span><span class="stat-lbl">Convocatorias cargadas</span></div>
+    <div><span class="stat-num" id="s-open">—</span><span class="stat-lbl">Identificadas como abiertas</span></div>
+    <div><span class="stat-num" id="s-src">4</span><span class="stat-lbl">Fuentes oficiales</span></div>
+  </div>
+</div>
+
+<div class="search-wrap" id="buscador">
+  <div class="search-box">
+    <div class="search-row">
+      <input class="sinput" id="q" type="text" placeholder="Buscar por título, organismo, palabra clave…" oninput="filtrar()">
+      <button class="sbtn" onclick="cargarTodo()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        Actualizar
+      </button>
+    </div>
+    <div class="filters">
+      <select class="fsel" id="f-ambito" onchange="filtrar()">
+        <option value="">Todos los ámbitos</option>
+        <option value="eu">Europeo</option>
+        <option value="nac">Nacional</option>
+        <option value="loc">Autonómico / Local</option>
+      </select>
+      <select class="fsel" id="f-estado" onchange="filtrar()">
+        <option value="">Todos los estados</option>
+        <option value="Abierta">Abierta</option>
+        <option value="Próxima">Próxima</option>
+        <option value="Cerrada">Cerrada</option>
+      </select>
+      <select class="fsel" id="f-benef" onchange="filtrar()">
+        <option value="">Todos los beneficiarios</option>
+        <option value="Empresa">Empresa</option>
+        <option value="ONG / Tercer sector">ONG / Tercer sector</option>
+        <option value="Entidad pública">Entidad pública</option>
+        <option value="Entidad local">Entidad local</option>
+        <option value="Universidad / Investigación">Universidad / Investigación</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="status-bar">
+    <div class="dot loading" id="dot"></div>
+    <span id="status">Conectando con las fuentes oficiales…</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)" id="ts"></span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-src="all" onclick="selTab('all',this)">Todas <span class="cnt" id="c-all">0</span></button>
+    <button class="tab" data-src="boe-ayudas" onclick="selTab('boe-ayudas',this)">BOE Ayudas <span class="cnt" id="c-boe-ayudas">0</span></button>
+    <button class="tab" data-src="boe-sec3" onclick="selTab('boe-sec3',this)">BOE Sec. III <span class="cnt" id="c-boe-sec3">0</span></button>
+    <button class="tab" data-src="eu" onclick="selTab('eu',this)">Europeas <span class="cnt" id="c-eu">0</span></button>
+    <button class="tab" data-src="gva" onclick="selTab('gva',this)">GVA / DOGV <span class="cnt" id="c-gva">0</span></button>
+  </div>
+
+  <div class="slabel">Convocatorias y resoluciones <small id="nres"></small></div>
+  <div class="cards" id="cards">
+    <div class="skel"><div class="skel-l" style="width:65%;margin-bottom:10px"></div><div class="skel-l" style="width:40%"></div></div>
+    <div class="skel"><div class="skel-l" style="width:78%;margin-bottom:10px"></div><div class="skel-l" style="width:32%"></div></div>
+    <div class="skel"><div class="skel-l" style="width:52%;margin-bottom:10px"></div><div class="skel-l" style="width:48%"></div></div>
+  </div>
+
+  <!-- FEED XML -->
+  <div id="feed" style="margin-top:3rem">
+    <div class="slabel">Feed XML / Atom público <small>Estándar RFC 4287 · Compatible con Make, Zapier y lectores RSS</small></div>
+    <div class="infobox">
+      <div class="iicon" style="background:#fff7ed;color:var(--accent)">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px">Feed Atom con todas las convocatorias activas</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Descarga el XML generado con los datos actuales o previsualiza la estructura antes de integrarlo en Make/Zapier.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-p" onclick="descargarFeed()">Descargar feed.xml</button>
+          <button class="btn-s" onclick="previsualizarFeed()">Vista previa XML</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div id="alertas" style="margin-top:3rem">
+    <div class="slabel">Alertas personalizadas <small>Notificación por email cuando se publique una convocatoria de tu interés</small></div>
+    <div class="infobox" style="flex-direction:column;gap:1rem">
+      <div class="alert-grid">
+        <input class="sinput" id="a-nombre" placeholder="Nombre de la entidad">
+        <input class="sinput" id="a-email" type="email" placeholder="Email de contacto">
+        <select class="fsel" style="height:44px;width:100%" id="a-tipo">
+          <option value="">Tipo de entidad</option>
+          <option>Ayuntamiento</option><option>Diputación</option>
+          <option>ONG / Asociación</option><option>Empresa / Startup</option>
+          <option>Universidad / Centro de investigación</option>
+        </select>
+        <select class="fsel" style="height:44px;width:100%" id="a-ambito">
+          <option value="">Ámbito de interés</option>
+          <option>Europeo</option><option>Nacional</option>
+          <option>Comunitat Valenciana</option><option>Todos los ámbitos</option>
+        </select>
+      </div>
+      <button class="btn-p" onclick="registrarAlerta()" style="width:fit-content">
+        Activar alertas gratuitas →
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal">
+    <button class="modal-x" onclick="cerrarModal()">&#215;</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<footer>
+  <p style="margin-bottom:6px">
+    FinanciApp · Datos en tiempo real del
+    <a href="https://www.boe.es/rss/canal.php?c=ayudas" target="_blank" rel="noopener">BOE Ayudas</a>,
+    <a href="https://boe.es/datosabiertos/api/boe/sumario/" target="_blank" rel="noopener">BOE API Sumario</a>,
+    <a href="https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/callupdates-rss.xml" target="_blank" rel="noopener">Comisión Europea</a>
+    y <a href="https://www.dogv.gva.es/datos/rss/rss_dogv.xml" target="_blank" rel="noopener">GVA/DOGV</a>
+  </p>
+  <p>Plataforma de datos abiertos · Sin cookies de terceros · Aviso legal</p>
+</footer>
+
+<script>
+// ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
+// BASE_URL apunta a tus funciones Vercel.
+// En desarrollo local (Live Server) puedes probar con allorigins como fallback.
+// En producción, Vercel asigna automáticamente la URL del proyecto.
+const BASE_URL = ''; // vacío = mismo dominio (funciona en Vercel automáticamente)
+
+const FUENTES = {
+  'boe-ayudas': { label: 'BOE — Canal Ayudas',   endpoint: '/api/boe?fuente=ayudas', ambito: 'nac' },
+  'boe-sec3':   { label: 'BOE — Sección III',     endpoint: '/api/boe?fuente=sec3',   ambito: 'nac' },
+  'eu':         { label: 'Comisión Europea',       endpoint: '/api/eu',                ambito: 'eu'  },
+  'gva':        { label: 'GVA / DOGV',             endpoint: '/api/gva',               ambito: 'loc' },
+};
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+let todas = [];
+let tabActiva = 'all';
+let conv_sel = null;
+const errores = {};
+
+// ─── CARGA ────────────────────────────────────────────────────────────────────
+async function cargarTodo() {
+  setStatus('loading', 'Consultando fuentes oficiales…');
+  mostrarSkeletons();
+  todas = [];
+  Object.keys(errores).forEach(k => delete errores[k]);
+
+  const promesas = Object.entries(FUENTES).map(async ([key, cfg]) => {
+    try {
+      const r = await fetch(BASE_URL + cfg.endpoint);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const json = await r.json();
+      if (!json.ok) throw new Error(json.error || 'Error desconocido');
+      return json.data || [];
+    } catch (e) {
+      errores[key] = e.message;
+      console.warn(`[${key}]`, e.message);
+      return [];
+    }
+  });
+
+  const resultados = await Promise.allSettled(promesas);
+  resultados.forEach(r => {
+    if (r.status === 'fulfilled') todas.push(...r.value);
+  });
+
+  todas = dedup(todas);
+
+  // Actualizar contadores
+  document.getElementById('s-total').textContent = todas.length;
+  document.getElementById('s-open').textContent  = todas.filter(c => c.estado === 'Abierta').length;
+  document.getElementById('c-all').textContent   = todas.length;
+
+  Object.keys(FUENTES).forEach(key => {
+    const n = todas.filter(c => c.fuente === key).length;
+    const el = document.getElementById('c-' + key);
+    if (el) el.textContent = n;
+  });
+
+  const nErr = Object.keys(errores).length;
+  if (nErr === 0) {
+    setStatus('ok', `${todas.length} convocatorias cargadas desde ${Object.keys(FUENTES).length} fuentes oficiales`);
+  } else if (todas.length > 0) {
+    setStatus('warn', `${todas.length} convocatorias · ${nErr} fuente(s) con error`);
+  } else {
+    setStatus('error', 'No se pudo conectar. Asegúrate de que las funciones Vercel están desplegadas.');
+  }
+
+  document.getElementById('ts').textContent = 'Actualizado: ' +
+    new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+
+  filtrar();
+}
+
+function mostrarSkeletons() {
+  document.getElementById('cards').innerHTML = [1,2,3].map(() =>
+    `<div class="skel"><div class="skel-l" style="width:65%;margin-bottom:10px"></div><div class="skel-l" style="width:38%"></div></div>`
+  ).join('');
+}
+
+// ─── FILTROS ──────────────────────────────────────────────────────────────────
+function selTab(src, btn) {
+  tabActiva = src;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  filtrar();
+}
+
+function filtrar() {
+  const q      = document.getElementById('q').value.toLowerCase();
+  const ambito = document.getElementById('f-ambito').value;
+  const estado = document.getElementById('f-estado').value;
+  const benef  = document.getElementById('f-benef').value;
+
+  const lista = todas.filter(c => {
+    if (tabActiva !== 'all' && c.fuente !== tabActiva) return false;
+    if (ambito && c.ambito !== ambito) return false;
+    if (estado && c.estado !== estado) return false;
+    if (benef  && c.beneficiario !== benef) return false;
+    if (q && !`${c.titulo} ${c.organismo} ${c.descripcion}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('nres').textContent = `${lista.length} resultado${lista.length !== 1 ? 's' : ''}`;
+  renderCards(lista);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderCards(lista) {
+  const el = document.getElementById('cards');
+  if (!lista.length) {
+    el.innerHTML = `<div class="empty"><strong>Sin resultados</strong>Prueba con otros filtros o pulsa Actualizar.</div>`;
+    return;
+  }
+  el.innerHTML = lista.map(c => `
+    <div class="card" onclick="abrirModal('${esc(c.id)}')">
+      <div class="cicon ${iclass(c.ambito)}">${itxt(c.ambito)}</div>
+      <div class="cbody">
+        <div class="cheader">
+          <div class="ctitle">${esc(c.titulo)}</div>
+          <div class="badges">
+            <span class="badge ${abadge(c.ambito)}">${albl(c.ambito)}</span>
+            <span class="badge ${ebadge(c.estado)}">${c.estado}</span>
+          </div>
+        </div>
+        <div class="cmeta">
+          <span>${esc(c.organismo)}</span>
+          ${c.cierre ? `<span>Cierre: ${fmtFecha(c.cierre)}</span>` : ''}
+          ${c.fechaPublicacion ? `<span>Publicado: ${fmtFecha(c.fechaPublicacion)}</span>` : ''}
+          <span style="color:var(--ink-muted);font-style:italic">${esc(FUENTES[c.fuente]?.label || c.fuente)}</span>
+        </div>
+      </div>
+      <div class="cright">
+        ${c.importe ? `<div class="camount">${esc(c.importe)}</div><div class="camount-lbl">importe</div>` : ''}
+        <a class="clink" href="${esc(c.enlace)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver oficial ↗</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function abrirModal(id) {
+  const c = todas.find(x => x.id === id);
+  if (!c) return;
+  conv_sel = c;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="badges" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem">
+      <span class="badge ${abadge(c.ambito)}">${albl(c.ambito)}</span>
+      <span class="badge ${ebadge(c.estado)}">${c.estado}</span>
+      <span class="badge" style="background:var(--bg);color:var(--ink-muted)">${esc(FUENTES[c.fuente]?.label || c.fuente)}</span>
+    </div>
+    <h2>${esc(c.titulo)}</h2>
+    <div style="margin-bottom:1.25rem">
+      <div class="mrow"><span class="lbl">Organismo</span><span class="val">${esc(c.organismo)}</span></div>
+      ${c.importe ? `<div class="mrow"><span class="lbl">Importe</span><span class="val">${esc(c.importe)}</span></div>` : ''}
+      ${c.cierre ? `<div class="mrow"><span class="lbl">Cierre</span><span class="val">${fmtFecha(c.cierre)}</span></div>` : ''}
+      ${c.beneficiario ? `<div class="mrow"><span class="lbl">Beneficiario</span><span class="val">${esc(c.beneficiario)}</span></div>` : ''}
+      ${c.fechaPublicacion ? `<div class="mrow"><span class="lbl">Publicación</span><span class="val">${fmtFecha(c.fechaPublicacion)}</span></div>` : ''}
+      ${c.referencia ? `<div class="mrow"><span class="lbl">Referencia</span><span class="val">${esc(c.referencia)}</span></div>` : ''}
+    </div>
+    ${c.descripcion ? `<div class="mdesc">${esc(c.descripcion)}</div>` : ''}
+    <div class="mactions">
+      <a class="btn-p" href="${esc(c.enlace)}" target="_blank" rel="noopener">Ver fuente oficial ↗</a>
+      <button class="btn-s" onclick="copiarXml()">Copiar XML Atom</button>
+    </div>
+    <div class="xml-wrap">
+      <h3>Entrada XML Atom (RFC 4287)</h3>
+      <div class="xml-block">${colorXml(buildEntry(c))}</div>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function cerrarModal() { document.getElementById('overlay').classList.remove('open'); }
+
+// ─── XML ATOM ─────────────────────────────────────────────────────────────────
+function xmlEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildEntry(c) {
+  return `<entry xmlns:fa="https://financiapp.es/ns/1.0">
+  <id>urn:financiapp:${xmlEsc(c.id)}</id>
+  <title type="text">${xmlEsc(c.titulo)}</title>
+  <link href="${xmlEsc(c.enlace)}" rel="alternate" type="text/html"/>
+  <updated>${new Date().toISOString()}</updated>
+  <author>
+    <name>${xmlEsc(c.organismo)}</name>
+  </author>
+  <category term="${xmlEsc(c.ambito)}" label="${xmlEsc(albl(c.ambito))}"/>
+  <category term="${xmlEsc(c.fuente)}" label="${xmlEsc(FUENTES[c.fuente]?.label || c.fuente)}"/>
+  <summary type="text">${xmlEsc((c.descripcion || c.titulo).slice(0,300))}</summary>
+  <fa:estado>${xmlEsc(c.estado)}</fa:estado>
+  <fa:beneficiario>${xmlEsc(c.beneficiario||'')}</fa:beneficiario>
+  <fa:importe>${xmlEsc(c.importe||'')}</fa:importe>
+  <fa:cierre>${xmlEsc(c.cierre||'')}</fa:cierre>
+</entry>`;
+}
+
+function buildFeed() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:fa="https://financiapp.es/ns/1.0">
+  <id>https://financiapp.es/feed.xml</id>
+  <title>FinanciApp — Convocatorias de financiación pública</title>
+  <subtitle>BOE Ayudas · BOE Sec. III · Comisión Europea · GVA/DOGV</subtitle>
+  <link href="https://financiapp.es/feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="https://financiapp.es" rel="alternate" type="text/html"/>
+  <updated>${new Date().toISOString()}</updated>
+  <author><name>FinanciApp</name><uri>https://financiapp.es</uri></author>
+  <generator version="2.0">FinanciApp</generator>
+${todas.map(buildEntry).join('\n')}
+</feed>`;
+}
+
+function colorXml(xml) {
+  return xml
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/&lt;(\/?[\w:]+)/g,'<span class="xt">&lt;$1</span>')
+    .replace(/([\w:]+)=&quot;([^&]*)&quot;/g,'<span class="xa">$1</span>=<span class="xv">&quot;$2&quot;</span>');
+}
+
+function copiarXml() {
+  if (!conv_sel) return;
+  const txt = buildEntry(conv_sel);
+  navigator.clipboard.writeText(txt).catch(() => {
+    const t = document.createElement('textarea');
+    t.value = txt; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); document.body.removeChild(t);
+  });
+  alert('Entrada XML Atom copiada al portapapeles.');
+}
+
+function descargarFeed() {
+  const blob = new Blob([buildFeed()], {type:'application/atom+xml;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'financiapp-feed.xml'; a.click();
+}
+
+function previsualizarFeed() {
+  const preview = buildFeed().slice(0, 2500) + '\n  ...\n</feed>';
+  document.getElementById('modal-body').innerHTML = `
+    <h2 style="font-family:'Fraunces',serif;font-weight:400;margin-bottom:1rem">Feed Atom — vista previa</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:1rem">${todas.length} entradas · RFC 4287 · Compatible con Make, Zapier, Feedly</p>
+    <div class="xml-block">${colorXml(preview)}</div>
+    <div class="mactions" style="margin-top:1rem">
+      <button class="btn-p" onclick="descargarFeed();cerrarModal()">Descargar feed.xml completo</button>
+      <button class="btn-s" onclick="cerrarModal()">Cerrar</button>
+    </div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+}
+
+// ─── ALERTAS ──────────────────────────────────────────────────────────────────
+function registrarAlerta() {
+  const nombre = document.getElementById('a-nombre').value.trim();
+  const email  = document.getElementById('a-email').value.trim();
+  if (!nombre || !email || !email.includes('@')) {
+    alert('Introduce el nombre de la entidad y un email válido.'); return;
+  }
+  // → Aquí conectarías con tu webhook de Make, Airtable API, o servicio de email
+  alert(`✓ Alerta activada para ${nombre}.\n\nRecibirás notificaciones en ${email}.`);
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function dedup(list){const seen=new Set();return list.filter(c=>{const k=c.titulo.slice(0,60).toLowerCase();if(seen.has(k))return false;seen.add(k);return true})}
+function setStatus(st,msg){const d=document.getElementById('dot');d.className='dot'+(st==='loading'?' loading':st==='error'?' error':st==='warn'?' warn':'');document.getElementById('status').textContent=msg}
+function fmtFecha(s){if(!s)return '';try{const d=new Date(s.length===8?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:s);if(!isNaN(d))return d.toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}catch{}return s}
+function albl(a){return{eu:'Europeo',nac:'Nacional',loc:'Autonómico / Local'}[a]||a}
+function abadge(a){return{eu:'b-eu',nac:'b-nac',loc:'b-loc'}[a]||'b-nac'}
+function ebadge(e){return{'Abierta':'b-open','Próxima':'b-soon','Cerrada':'b-closed'}[e]||'b-open'}
+function iclass(a){return{eu:'i-eu',nac:'i-nac',loc:'i-loc'}[a]||'i-nac'}
+function itxt(a){return{eu:'EU',nac:'ES',loc:'CV'}[a]||'—'}
+function ir(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'})}
+
+// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
+cargarTodo();
+</script>
+</body>
+</html>
