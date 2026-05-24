@@ -1,101 +1,140 @@
 /**
  * /api/eu.js
- * Proxy para convocatorias abiertas del EU Funding & Tenders Portal.
+ * Proxy para convocatorias del EU Funding & Tenders Portal.
  *
- * Usa la API de datos del portal oficial:
- * https://ec.europa.eu/info/funding-tenders/opportunities/data/topics
+ * Usa la Search API oficial documentada en:
+ * https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis
  *
- * Parámetros clave:
- *   status=31094501  → Open (abierta)
- *   status=31094502  → Forthcoming (próxima apertura)
- *   pageSize=50      → resultados por página
+ * Endpoint: POST https://api.tech.ec.europa.eu/search-api/prod/rest/search
+ * Body: query Elasticsearch con filtros de tipo, estado y periodo.
  *
- * Documentación: https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis
+ * Tipos:
+ *   0 = Tenders (licitaciones)
+ *   1 = Calls for proposals (convocatorias de subvención)
+ *   2 = Prizes
+ *   8 = Innovation Procurement
+ *
+ * Estados:
+ *   31094501 = Open
+ *   31094502 = Forthcoming
+ *   31094503 = Closed
  */
 
-const BASE = 'https://ec.europa.eu/info/funding-tenders/opportunities/data/topics';
-const TOPIC_URL = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
+const SEARCH_API = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search';
 
-// Códigos de estado del portal EU
-const STATUS_OPEN       = '31094501';
-const STATUS_FORTHCOMING = '31094502';
-
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (compatible; FinanciApp/2.0; +https://financiapp-wvx2.vercel.app)',
-  'Accept': 'application/json',
-  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-  'Origin': 'https://ec.europa.eu',
-  'Referer': 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
+// Query: solo grants/proposals abiertos y próximos, periodo 2021-2027
+const QUERY_BODY = {
+  bool: {
+    must: [
+      {
+        terms: {
+          type: ['1', '2', '8'], // grants, prizes, innovation procurement (excluye licitaciones puras)
+        },
+      },
+      {
+        terms: {
+          status: ['31094501', '31094502'], // open + forthcoming
+        },
+      },
+      {
+        term: {
+          programmePeriod: '2021 - 2027',
+        },
+      },
+    ],
+  },
 };
 
-function inferirBenef(keywords, description) {
-  const t = ((keywords || []).join(' ') + ' ' + (description || '')).toLowerCase();
+const REQUEST_BODY = {
+  query:       JSON.stringify(QUERY_BODY),
+  languages:   ['es', 'en'],
+  sort:        'startDate',
+  order:       'DESC',
+  pageSize:    '50',
+  pageNumber:  '1',
+};
+
+const HEADERS = {
+  'Content-Type':  'application/json',
+  'Accept':        'application/json',
+  'User-Agent':    'Mozilla/5.0 (compatible; FinanciApp/2.0; +https://financiapp-wvx2.vercel.app)',
+  'Origin':        'https://ec.europa.eu',
+  'Referer':       'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function stripHtml(s) {
+  return (s || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#\d]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function inferirBenef(tags, title) {
+  const t = ([...(tags || []), title || '']).join(' ').toLowerCase();
   if (t.includes('sme') || t.includes('enterprise') || t.includes('startup') || t.includes('business')) return 'Empresa';
-  if (t.includes('ngo') || t.includes('civil society') || t.includes('non-profit')) return 'ONG / Tercer sector';
-  if (t.includes('research') || t.includes('university') || t.includes('academic')) return 'Universidad / Investigación';
-  if (t.includes('public') || t.includes('authority') || t.includes('municipality') || t.includes('local')) return 'Entidad pública';
+  if (t.includes('ngo') || t.includes('civil society') || t.includes('non-profit') || t.includes('association')) return 'ONG / Tercer sector';
+  if (t.includes('research') || t.includes('university') || t.includes('academic') || t.includes('higher education')) return 'Universidad / Investigación';
+  if (t.includes('public') || t.includes('authority') || t.includes('municipality')) return 'Entidad pública';
   return 'Empresa / Universidad / Entidad pública';
 }
 
-function guessEstado(statusCode, deadlineDate) {
-  if (statusCode === STATUS_FORTHCOMING) return 'Próxima';
-  if (deadlineDate) {
+function guessEstado(statusCode, deadline) {
+  if (statusCode === '31094502') return 'Próxima';
+  if (statusCode === '31094503') return 'Cerrada';
+  if (deadline) {
     try {
-      const d = new Date(deadlineDate);
-      if (!isNaN(d) && d < new Date()) return 'Cerrada';
+      if (new Date(deadline) < new Date()) return 'Cerrada';
     } catch {}
   }
   return 'Abierta';
 }
 
-function mapTopic(t) {
-  if (!t) return null;
-  const identifier = (t.identifier || t.topicIdentifier || '').toLowerCase();
+function fmtImporte(val) {
+  if (!val) return null;
+  const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  if (isNaN(n)) return null;
+  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `€${Math.round(n / 1_000)}K`;
+  return `€${Math.round(n).toLocaleString('es-ES')}`;
+}
+
+function mapResult(item) {
+  if (!item) return null;
+
+  // La API devuelve los campos en metadata o directamente en el objeto
+  const md       = item.metadata || item;
+  const title    = md.title    || md.topicTitle    || item.title    || '';
+  const id       = md.identifier || md.topicIdentifier || item.identifier || item.id || '';
+  const prog     = md.programmeName || md.frameworkProgramme || md.callTitle || '';
+  const deadline = md.deadlineDate  || md.deadline  || md.submissionDeadline || null;
+  const budget   = md.budgetOverview || md.budget   || md.totalBudget || null;
+  const status   = String(md.status || item.status || '31094501');
+  const desc     = stripHtml(md.description || md.topicDescription || md.objective || title);
+  const tags     = md.tags || md.keywords || md.crossCuttingPriorities || [];
+  const pubDate  = md.publicationDate || md.startDate || md.openingDate || null;
+  const linkId   = (id || title).toLowerCase().replace(/\s+/g, '-');
+
+  if (!title) return null;
+
   return {
-    id:               'eu-' + (t.identifier || t.id || Math.random().toString(36).slice(2)),
-    titulo:           (t.title || t.topicTitle || 'Convocatoria EU').slice(0, 200),
-    organismo:        t.programmeName || t.callTitle || 'Comisión Europea / Horizon Europe',
+    id:               'eu-' + Buffer.from(id || title).toString('base64').slice(0, 20),
+    titulo:           title.slice(0, 200),
+    organismo:        prog ? `Comisión Europea — ${prog}` : 'Comisión Europea / Horizon Europe',
     ambito:           'eu',
     fuente:           'eu',
-    estado:           guessEstado(t.status, t.deadlineDate || t.deadline),
-    beneficiario:     inferirBenef(t.tags || t.keywords, t.title),
-    importe:          t.budgetTopicAction
-                        ? `€${Number(t.budgetTopicAction).toLocaleString('es-ES')}`
-                        : (t.budget ? `€${Number(t.budget).toLocaleString('es-ES')}` : null),
-    cierre:           t.deadlineDate || t.deadline || null,
-    descripcion:      (t.description || t.topicDescription || t.title || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g,' ').trim().slice(0, 500),
-    enlace:           identifier
-                        ? `https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/${identifier}`
+    estado:           guessEstado(status, deadline),
+    beneficiario:     inferirBenef(tags, title),
+    importe:          fmtImporte(budget),
+    cierre:           deadline,
+    descripcion:      desc.slice(0, 500),
+    enlace:           id
+                        ? `https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/${id.toLowerCase()}`
                         : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
-    fechaPublicacion: t.publicationDate || t.startDate || null,
-    referencia:       t.identifier || t.callIdentifier || null,
+    fechaPublicacion: pubDate,
+    referencia:       id || null,
   };
 }
 
-async function fetchTopics(status, pageSize = 50) {
-  const url = `${BASE}?status=${status}&language=es&sortBy=startDate&pageSize=${pageSize}&pageNumber=1`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const r = await fetch(url, { headers: HEADERS, signal: controller.signal });
-    clearTimeout(timeout);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const json = await r.json();
-    // El portal devuelve { topicResultDto: { topics: [...] } } o similar
-    const topics =
-      json?.topicResultDto?.topics ||
-      json?.topics ||
-      json?.result ||
-      json?.results ||
-      json?.data ||
-      (Array.isArray(json) ? json : []);
-    return topics.map(mapTopic).filter(Boolean);
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
-  }
-}
+// ─── Handler ──────────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -108,108 +147,153 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
 
-  const errors = [];
-
-  // Intentar API oficial del portal con convocatorias abiertas Y próximas
+  // ── Intento 1: Search API oficial ─────────────────────────────────────────
   try {
-    const [abiertas, proximas] = await Promise.allSettled([
-      fetchTopics(STATUS_OPEN, 50),
-      fetchTopics(STATUS_FORTHCOMING, 20),
-    ]);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
-    const data = [
-      ...(abiertas.status === 'fulfilled' ? abiertas.value : []),
-      ...(proximas.status === 'fulfilled' ? proximas.value : []),
+    const r = await fetch(SEARCH_API, {
+      method:  'POST',
+      headers: HEADERS,
+      body:    JSON.stringify(REQUEST_BODY),
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!r.ok) throw new Error(`Search API HTTP ${r.status}`);
+
+    const json = await r.json();
+
+    // La respuesta puede venir en distintas estructuras según la versión de la API
+    const hits =
+      json?.hits?.hits ||         // estructura Elasticsearch directa
+      json?.results ||            // estructura portal simplificada
+      json?.data?.results ||
+      json?.response?.results ||
+      (Array.isArray(json) ? json : []);
+
+    if (!hits.length) throw new Error('Search API sin resultados');
+
+    const data = hits
+      .map(h => mapResult(h._source || h.fields || h))
+      .filter(Boolean);
+
+    if (!data.length) throw new Error('Sin resultados mapeables');
+
+    return res.status(200).json({
+      ok:    true,
+      fuente: 'eu',
+      via:   'search-api',
+      total: data.length,
+      data,
+    });
+
+  } catch (apiErr) {
+    console.warn('EU Search API error:', apiErr.message, '— intentando API de tópicos');
+  }
+
+  // ── Intento 2: API de tópicos (endpoint REST clásico) ─────────────────────
+  try {
+    const statusParams = '31094501,31094502';
+    const url = `https://ec.europa.eu/info/funding-tenders/opportunities/data/topics?status=${statusParams}&language=es&sortBy=startDate&order=DESC&pageSize=50&pageNumber=1`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const r = await fetch(url, {
+      headers: { ...HEADERS, 'Content-Type': undefined },
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!r.ok) throw new Error(`Topics API HTTP ${r.status}`);
+
+    const json = await r.json();
+    const topics =
+      json?.topicResultDto?.topics ||
+      json?.topics ||
+      json?.results ||
+      (Array.isArray(json) ? json : []);
+
+    if (!topics.length) throw new Error('Topics API sin resultados');
+
+    const data = topics.map(mapResult).filter(Boolean);
+
+    return res.status(200).json({
+      ok:    true,
+      fuente: 'eu',
+      via:   'topics-api',
+      total: data.length,
+      data,
+    });
+
+  } catch (topicsErr) {
+    console.warn('EU Topics API error:', topicsErr.message, '— intentando RSS');
+  }
+
+  // ── Intento 3: RSS de callupdates ─────────────────────────────────────────
+  try {
+    const RSS = 'https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/callupdates-rss.xml';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const r = await fetch(RSS, {
+      headers: { ...HEADERS, Accept: 'application/xml, text/xml' },
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!r.ok) throw new Error(`RSS HTTP ${r.status}`);
+    const xml = await r.text();
+
+    function getTag(raw, tag) {
+      const re = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\/${tag}>|<${tag}[^>]*>([^<]*)<\/${tag}>`, 'i');
+      const m = raw.match(re);
+      return m ? (m[1] || m[2] || '').trim() : '';
+    }
+    function getNs(raw, tag) {
+      const re = new RegExp(`<(?:[\\w]+:)?${tag}[^>]*>([^<]*)<\/(?:[\\w]+:)?${tag}>`, 'i');
+      const m = raw.match(re);
+      return m ? m[1].trim() : '';
+    }
+
+    const rawItems = [
+      ...[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m => m[1]),
+      ...[...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)].map(m => m[1]),
     ];
 
-    if (abiertas.status === 'rejected') errors.push('Open: ' + abiertas.reason?.message);
-    if (proximas.status === 'rejected') errors.push('Forthcoming: ' + proximas.reason?.message);
+    if (!rawItems.length) throw new Error('RSS sin elementos');
 
-    if (data.length > 0) {
-      return res.status(200).json({
-        ok: true,
-        fuente: 'eu',
-        total: data.length,
-        errors: errors.length ? errors : undefined,
-        data,
-      });
-    }
+    const data = rawItems.map((raw, i) => {
+      const title    = getTag(raw, 'title');
+      if (!title) return null;
+      const link     = getTag(raw, 'link') || getTag(raw, 'guid');
+      const desc     = stripHtml(getTag(raw, 'description') || getTag(raw, 'summary') || '');
+      const pubDate  = getTag(raw, 'pubDate') || getTag(raw, 'published');
+      const deadline = getNs(raw, 'deadlineDate') || getNs(raw, 'deadline');
+      const budget   = getNs(raw, 'budget') || getNs(raw, 'totalBudget');
+      const prog     = getNs(raw, 'programme') || getNs(raw, 'frameworkProgramme') || '';
+      const callId   = getNs(raw, 'identifier') || getNs(raw, 'callIdentifier') || '';
+      return {
+        id:               'eu-rss-' + Buffer.from(callId || link || title).toString('base64').slice(0, 16),
+        titulo:           title.slice(0, 200),
+        organismo:        prog ? `Comisión Europea — ${prog}` : 'Comisión Europea',
+        ambito:           'eu', fuente: 'eu',
+        estado:           deadline ? (new Date(deadline) < new Date() ? 'Cerrada' : 'Abierta') : 'Abierta',
+        beneficiario:     inferirBenef([], title + ' ' + desc),
+        importe:          fmtImporte(budget),
+        cierre:           deadline || null,
+        descripcion:      desc.slice(0, 500),
+        enlace:           link || 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
+        fechaPublicacion: pubDate,
+        referencia:       callId || null,
+      };
+    }).filter(Boolean);
 
-    // Si la API oficial no devuelve datos, intentar con el RSS de actualizaciones
-    throw new Error('API oficial sin datos. ' + errors.join('; '));
+    return res.status(200).json({ ok: true, fuente: 'eu', via: 'rss', total: data.length, data });
 
-  } catch (apiError) {
-    console.warn('EU API oficial falló:', apiError.message, '— intentando RSS de respaldo');
-
-    // Respaldo: RSS de callupdates (el que ya teníamos)
-    const RSS_URL = 'https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/callupdates-rss.xml';
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const r = await fetch(RSS_URL, { headers: { ...HEADERS, Accept: 'application/xml, text/xml' }, signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (!r.ok) throw new Error(`RSS HTTP ${r.status}`);
-      const xml = await r.text();
-
-      function getTag(raw, tag) {
-        const re = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\/${tag}>|<${tag}[^>]*>([^<]*)<\/${tag}>`, 'i');
-        const m = raw.match(re);
-        return m ? (m[1] || m[2] || '').trim() : '';
-      }
-      function getNs(raw, tag) {
-        const re = new RegExp(`<(?:[\\w]+:)?${tag}[^>]*>([^<]*)<\/(?:[\\w]+:)?${tag}>`, 'i');
-        const m = raw.match(re);
-        return m ? m[1].trim() : '';
-      }
-
-      const rawItems = [
-        ...[...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m => m[1]),
-        ...[...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)].map(m => m[1]),
-      ];
-
-      if (!rawItems.length) throw new Error('RSS sin elementos');
-
-      const data = rawItems.map((raw, i) => {
-        const title    = getTag(raw, 'title');
-        const link     = getTag(raw, 'link') || getTag(raw, 'guid');
-        const desc     = (getTag(raw, 'description') || getTag(raw, 'summary') || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-        const pubDate  = getTag(raw, 'pubDate') || getTag(raw, 'published');
-        const deadline = getNs(raw, 'deadlineDate') || getNs(raw, 'deadline');
-        const budget   = getNs(raw, 'budget') || getNs(raw, 'totalBudget');
-        const prog     = getNs(raw, 'programme') || getNs(raw, 'frameworkProgramme') || '';
-        const callId   = getNs(raw, 'identifier') || getNs(raw, 'callIdentifier') || '';
-        if (!title) return null;
-        return {
-          id: 'eu-rss-' + Buffer.from(callId || link || title).toString('base64').slice(0, 16),
-          titulo: title.slice(0, 200),
-          organismo: prog ? `Comisión Europea — ${prog}` : 'Comisión Europea',
-          ambito: 'eu', fuente: 'eu',
-          estado: deadline ? (new Date(deadline) < new Date() ? 'Cerrada' : 'Abierta') : 'Abierta',
-          beneficiario: inferirBenef([], title + ' ' + desc),
-          importe: budget || null,
-          cierre: deadline || null,
-          descripcion: desc.slice(0, 500),
-          enlace: link || 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
-          fechaPublicacion: pubDate,
-          referencia: callId || null,
-        };
-      }).filter(Boolean);
-
-      return res.status(200).json({
-        ok: true,
-        fuente: 'eu',
-        via: 'rss-respaldo',
-        total: data.length,
-        data,
-      });
-
-    } catch (rssError) {
-      console.error('EU RSS respaldo también falló:', rssError.message);
-      return res.status(500).json({
-        ok: false,
-        error: `API oficial: ${apiError.message} | RSS: ${rssError.message}`,
-      });
-    }
+  } catch (rssErr) {
+    console.error('EU todos los intentos fallaron:', rssErr.message);
+    return res.status(500).json({ ok: false, error: rssErr.message });
   }
 };
