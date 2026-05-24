@@ -1,216 +1,2654 @@
-/**
- * /api/boe.js
- * Proxy para las fuentes del BOE:
- *   GET /api/boe?fuente=ayudas   → RSS canal ayudas
- *   GET /api/boe?fuente=sec3     → API sumario sección III (últimos 3 días hábiles)
- *
- * Detecta automáticamente convocatorias de la Comunitat Valenciana
- * y las etiqueta como ambito:'loc' en lugar de 'nac'.
- */
-
-const CANAL_AYUDAS = 'https://www.boe.es/rss/canal.php?c=ayudas';
-const API_SUMARIO  = 'https://boe.es/datosabiertos/api/boe/sumario/';
-
-const KW_SUBV = [
-  'subvenci', 'convocator', 'ayuda', 'financiaci',
-  'beca', 'programa de apoyo', 'concurso de', 'fondo',
-];
-
-// ── Detección Comunitat Valenciana ─────────────────────────────────────────
-// Si el organismo o título contiene alguno de estos términos → ambito = 'loc'
-const KW_CV = [
-  'generalitat valenciana', 'conselleria', 'consell valencià',
-  'ivace', 'ivaj', 'ivam', 'ivass', 'ivforce',
-  'diputació de valència', "diputació d'alacant", 'diputació de castelló',
-  'diputación de valencia', 'diputación de alicante', 'diputación de castellón',
-  'comunitat valenciana', 'comunidad valenciana',
-  'gva', 'dogv', 'diari oficial de la generalitat',
-];
-
-function detectarAmbito(organismo, titulo) {
-  const t = ((organismo || '') + ' ' + (titulo || '')).toLowerCase();
-  return KW_CV.some(kw => t.includes(kw)) ? 'loc' : 'nac';
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function diasHabiles(n) {
-  const fechas = [];
-  const hoy = new Date();
-  let cursor = new Date(hoy);
-  while (fechas.length < n) {
-    const dow = cursor.getDay();
-    if (dow !== 0 && dow !== 6) {
-      fechas.push(cursor.toISOString().slice(0, 10).replace(/-/g, ''));
-    }
-    cursor.setDate(cursor.getDate() - 1);
+[
+  {
+    "id": 1108825,
+    "mrr": false,
+    "numeroConvocatoria": "907264",
+    "descripcion": "LÍNEA S0145. Resolución del conseller de Sanidad que efectúa la convocatoria de las ayudas destinadas a promover la salud sexual, principalmente en población de especial vulnerabilidad por su edad, opciones sexuales o identidad sexual y prevención del est",
+    "descripcionLeng": "Resolució del conseller de Sanitat, per la qual s'efectua la convocatòria de les ajudes destinades a promoure la salut sexual, principalment en població d'especial vulnerabilitat per la seua edat, opciones sexuals o identitat sexual i prevenció de l'estig",
+    "fechaRecepcion": "2026-05-21",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1108790,
+    "mrr": false,
+    "numeroConvocatoria": "907229",
+    "descripcion": "S0317 - ESTANCIAS VACACIONALES PARA PERSONAS CON DISCAPACIDAD - 2026",
+    "descripcionLeng": "S0317 - ESTADES VACACIONALS PER A PERSONES AMB DISCAPACITAT - 2026",
+    "fechaRecepcion": "2026-05-21",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1108473,
+    "mrr": false,
+    "numeroConvocatoria": "906912",
+    "descripcion": "S0228 - AYUDAS PERSONALES PARA LA PROMOCIÓN DE LA AUTONOMÍA PERSONAL - 2026",
+    "descripcionLeng": "S0228 - AJUDES PERSONALS PER A LA PROMOCIÓ DE L'AUTONOMIA PERSONAL - 2026",
+    "fechaRecepcion": "2026-05-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1108342,
+    "mrr": false,
+    "numeroConvocatoria": "906781",
+    "descripcion": "Subvenciones a asociaciones de alumnado FPA y sus federaciones para financiar los gastos de funcionamiento y el fomento de actividades",
+    "descripcionLeng": "Subvencions a associacions d'alumnat FPA i les seues federacions per a finançar els gastos de funcionament i el foment d'activitats",
+    "fechaRecepcion": "2026-05-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1108341,
+    "mrr": false,
+    "numeroConvocatoria": "906780",
+    "descripcion": "Subvenciones a dirigidas a las asociaciones de alumnado y sus federaciones",
+    "descripcionLeng": "Subvencions dirigides a les associacions d’alumnat i les seues federacions",
+    "fechaRecepcion": "2026-05-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1108339,
+    "mrr": false,
+    "numeroConvocatoria": "906778",
+    "descripcion": "S0138 - MEJORA DE LAS CONDICIONES DE ACCESIBILIDAD AL MEDIO FÍSICO - 2026",
+    "descripcionLeng": "S0138 - MILLORA DE LES CONDICIONS D'ACCESSIBILITAT AL MEDI FÍSIC - 2026",
+    "fechaRecepcion": "2026-05-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107900,
+    "mrr": false,
+    "numeroConvocatoria": "906339",
+    "descripcion": "TRANSFERENCIA A LA AGÈNCIA VALENCIANA D'AVALUACIÓ I PROSPECTIVA (AVAP). LINEA X0040, CAPÍTULO 7. EJERCICIO 2025.",
+    "descripcionLeng": "TRANSFERENCIA A LA AGÈNCIA VALENCIANA D'AVALUACIÓ I PROSPECTIVA (AVAP). LINEA X0040, CAPÍTULO 7. EJERCICIO 2025.",
+    "fechaRecepcion": "2026-05-18",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107599,
+    "mrr": false,
+    "numeroConvocatoria": "906038",
+    "descripcion": "TRANSFERENCIA A LA AGÈNCIA VALENCIANA D'AVALUACIÓ I PROSPECTIVA (AVAP). LINEA X0040, CAPÍTULO 4. EJERCICIO 2026.",
+    "descripcionLeng": "TRANSFERENCIA A LA AGÈNCIA VALENCIANA D'AVALUACIÓ I PROSPECTIVA (AVAP). LINEA X0040, CAPÍTULO 4. EJERCICIO 2026.",
+    "fechaRecepcion": "2026-05-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107569,
+    "mrr": false,
+    "numeroConvocatoria": "906008",
+    "descripcion": "Resolución de la Conselleria de Agricultura, Agua, Ganadería y Pesca, por la que se convocan para el ejercicio 2026, ayudas a la certificación de la producción ecológica en la Comunitat Valenciana",
+    "descripcionLeng": "Resolució de la Conselleria d’Agricultura, Aigua, Ramaderia i Pesca, per la qual es convoquen, per a l’exercici 2026, ajudes a la certificació de la producció ecològica en la Comunitat Valenciana",
+    "fechaRecepcion": "2026-05-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107460,
+    "mrr": false,
+    "numeroConvocatoria": "905899",
+    "descripcion": "LÍNEA S0144 Resolución  del conseller de Sanidad, por la que se efectúa la convocatoria de ayudas en materia de proyectos y programas  para el despliegue del Plan de Salud Comunitat Valenciana en sus municipios.",
+    "descripcionLeng": "Resolució del conseller de Sanitat  per la qual s'efectua la convocatòria de les ajudes en matèria de projectes y programes per el desplegament del Pla de Salut de la Comunitat Valenciana en els seus municipis.",
+    "fechaRecepcion": "2026-05-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107444,
+    "mrr": false,
+    "numeroConvocatoria": "905883",
+    "descripcion": "LÍNEA S0146. Resolución del Conseller de Sanidad, por la que efectúa la convocatoria de las ayudas destinadas a promover proyectos de promoción de la salud perinatal y primera infancia",
+    "descripcionLeng": "RESOLUCIÓ  del conseller de Sanitat, per la qual s'efectua la convocatòria de les ajudes destinades a promoure projectes de promoció  de la  salut perinatal i primera infància.",
+    "fechaRecepcion": "2026-05-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107374,
+    "mrr": false,
+    "numeroConvocatoria": "905813",
+    "descripcion": "RESOLUCIÓN POR LA CUAL SE EFECTÚA UNA TRANSFERENCIA A LAS UNIVERSIDADES PÚBLICAS DE LA COMUNITAT VALENCIANA PARA FINANCIAR SUS GASTOS DE PERSONAL Y FUNCIONAMIENTO EN EL EJERCICIO 2026. CAPÍTULO 4. LÍNEA T0002.",
+    "descripcionLeng": "RESOLUCIÓN POR LA CUAL SE EFECTÚA UNA TRANSFERENCIA A LAS UNIVERSIDADES PÚBLICAS DE LA COMUNITAT VALENCIANA PARA FINANCIAR SUS GASTOS DE PERSONAL Y FUNCIONAMIENTO EN EL EJERCICIO 2026. CAPÍTULO 4. LÍNEA T0002.",
+    "fechaRecepcion": "2026-05-14",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107245,
+    "mrr": false,
+    "numeroConvocatoria": "905684",
+    "descripcion": "LÍNEA S0149. Resolución del conseller de Sanidad , que efectúa la convocatoria ayudas en materia de proyectos de apoyo a las asociaciones de personas consumidoras en el ámbito de la seguridad alimentaria",
+    "descripcionLeng": "Resolució del conseller de Sanitat, per la qual s'efectua la convocatòria de les ajudes en matèria de projectes de suport a associacions de persones consumidores en l'àmbit de la seguretat alimentària.",
+    "fechaRecepcion": "2026-05-14",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1107056,
+    "mrr": false,
+    "numeroConvocatoria": "905495",
+    "descripcion": "AYUDAS PARA EL FOMENTO DE LA INNOVACIÓN TECNOLÓGICA A TRAVÉS DE FINCAS COLABORADORAS",
+    "descripcionLeng": "AJUDES PER AL FOMENT DE LA INNOVACIÓ TECNOLÒGICA A TRAVÉS DE FINQUES COL.LABORADORES",
+    "fechaRecepcion": "2026-05-13",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106570,
+    "mrr": false,
+    "numeroConvocatoria": "905009",
+    "descripcion": "Resolución 11/05/26 Director General de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan las subvenciones públicas destinadas a la integración sociolaboral de personas trabajadoras en situación de exclusión social en empresas de",
+    "descripcionLeng": "Resolució 11/05/26 director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen les subvencions públiques destinades a la integració sociolaboral de persones treballadores en situació d’exclusió social en empreses d’inserc",
+    "fechaRecepcion": "2026-05-12",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106549,
+    "mrr": false,
+    "numeroConvocatoria": "904988",
+    "descripcion": "S1743 PROYECTOS PROGRAMAS STEAM",
+    "descripcionLeng": "S1743 PROJECTES PROGRAMES STEAM",
+    "fechaRecepcion": "2026-05-12",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106471,
+    "mrr": false,
+    "numeroConvocatoria": "904910",
+    "descripcion": "S1743 PROYECTOS PROGRAMAS STEAM",
+    "descripcionLeng": "S1743 PROJECTES PROGRAMES STEAM",
+    "fechaRecepcion": "2026-05-12",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106448,
+    "mrr": false,
+    "numeroConvocatoria": "904887",
+    "descripcion": "Resolución de 11 de mayo de 2026, del director general de LABORA Servicio Valenciano de Empleo y For-mación, por la que se da publicidad a la línea de crédito y al importe global máximo destinado a financiar las ayudas adicionales dirigidas a los trabajad",
+    "descripcionLeng": "Resolució d’11 de maig de 2026, del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es dona publicitat a la línia de crèdit i a l’import global màxim destinat a finançar les ajudes addicio-nals dirigides als treballadors afe",
+    "fechaRecepcion": "2026-05-12",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106319,
+    "mrr": false,
+    "numeroConvocatoria": "904758",
+    "descripcion": "Resolución de la Conselleria de Educación, Cultura y Universidades, por la que se convocan becas para el alumnado que finalice sus estudios universitarios durante el curso 2025-2026 en las universidades que integran el Sistema Universitario Valenciano.",
+    "descripcionLeng": "Resolució de la Conselleria d’Educació, Cultura i Universitats, per la qual es convoquen beques per a l’alumnat que finalitze els estudis universitaris durant el curs 2025-2026 en les universitats que integren el Sistema Universitari Valencià.",
+    "fechaRecepcion": "2026-05-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1106036,
+    "mrr": false,
+    "numeroConvocatoria": "904475",
+    "descripcion": "RESOLUCIÓN de 29 de abril de 2026, de asignación del Fondo de Cooperación Municipal de los Municipios y Entidades Locales Menores de la Comunitat Valenciana a cada entidad beneficiaria para el ejercicio presupuestario 2026.",
+    "descripcionLeng": "RESOLUCIÓ de 29 d'abril de 2026, d'assignació del Fons de Cooperació Municipal dels Municipis i Entitats Locals Menors de la Comunitat Valenciana a cada entitat beneficiària per a l'exercici pressupostari 2026",
+    "fechaRecepcion": "2026-05-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE PRESIDENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105986,
+    "mrr": false,
+    "numeroConvocatoria": "904425",
+    "descripcion": "Resolución 08/05/2026 Director General de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan las subvenciones públicas destinadas al fomento del empleo de personas con discapacidad en centros especiales de empleo (CEE)",
+    "descripcionLeng": "Resolució 08/05/2026 Director General de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen les subvencions públiques destinades al foment de l’ocupació de persones amb discapacitat en centres especials d’ocupació (CEO) per a l",
+    "fechaRecepcion": "2026-05-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105764,
+    "mrr": false,
+    "numeroConvocatoria": "904203",
+    "descripcion": "RESOLUCIÓN de 07/05/2026, del director general de LABORA Servicio Valenciano de Empleo y Formación, por la cual se convocan subvenciones para la creación de nuevos puestos de trabajo vinculados a inversión fija, destinadas a la integración sociolabor",
+    "descripcionLeng": "RESOLUCIÓ de 07/05/2026, del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen subvencions per a crear nous llocs de treball vinculats a inversió fixa, destinades a la integració sociolaboral de persones treb",
+    "fechaRecepcion": "2026-05-07",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105752,
+    "mrr": false,
+    "numeroConvocatoria": "904191",
+    "descripcion": "RESOLUCIÓN de 7 de mayo de 2026, del director general de LABORA Servicio Valenciano de Empleo y Formación, por la cual se convocan subvenciones destinadas a la integración sociolaboral de personas trabajadoras en situación de exclusión social en empresas",
+    "descripcionLeng": "RESOLUCIÓ de 7 de maig de 2026, del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen subvencions destinades a la integració sociolaboral de persones treballadores en situació d’exclusió social en empr",
+    "fechaRecepcion": "2026-05-07",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105647,
+    "mrr": false,
+    "numeroConvocatoria": "904086",
+    "descripcion": "Subvenciones destinadas a financiar las actuaciones de intervención arquitectónica en Consultorios aux. destinados a la prestación de asistencia primaria sanitaria por parte de esta Conselleria, en municipios de la CV, 2025-2026",
+    "descripcionLeng": "Subvencions destinades a finançar les actuacions d’intervenció arquitectònica en consultoris aux. destinats a la prestació d’assistència primària sanitària per part d’esta Conselleria en municipis de la CV, 2025-2026",
+    "fechaRecepcion": "2026-05-07",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105316,
+    "mrr": false,
+    "numeroConvocatoria": "903755",
+    "descripcion": "Subvenciones de actividades de asociaciones de familias del alumnado, sus federaciones y confederaciones",
+    "descripcionLeng": "Subvencions d'activitats d'associacions de famílies de l'alumnat, les seues federacions i confederacions",
+    "fechaRecepcion": "2026-05-06",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105069,
+    "mrr": false,
+    "numeroConvocatoria": "903508",
+    "descripcion": "INSTITUT VALENCIÀ DE CONSERVACIÓ, RESTAURACIÓ I INVESTIGACIÓ, PARA LA FINANCIACIÓN DE GASTOS DE FUNCIONAMIENTO Y ACTIVIDADES DE LA ENTIDAD",
+    "descripcionLeng": "INSTITUT VALENCIÀ DE CONSERVACIÓ, RESTAURACIÓ I INVESTIGACIÓ, PER AL FINANÇAMENT DELS GASTOS DE FUNCIONAMENT I ACTIVITATS DE L'ENTITAT",
+    "fechaRecepcion": "2026-05-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1105028,
+    "mrr": false,
+    "numeroConvocatoria": "903467",
+    "descripcion": "RESOLUCIÓN de 5 de mayo de 2026, del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones destinadas a la contratación de personas desempleadas con trastorno mental grave o pr",
+    "descripcionLeng": "RESOLUCIÓ de 5 de maig de2026, del director general de Labora Servici Valencià d'Ocupació i Formació, per la qual es convoquen, per a l'exercici 2026, les subvencions que es destinen a contractar persones desocupades amb trastorn mental greu o problemes d",
+    "fechaRecepcion": "2026-05-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1104841,
+    "mrr": false,
+    "numeroConvocatoria": "903280",
+    "descripcion": "Ayudas al Impulso a la internacionalización de empresas exportadoras de la Comunitat Valenciana para el ejercicio 2026",
+    "descripcionLeng": "Ajudes a l’impuls a la internacionalització d'empreses exportadores de la Comunitat Valenciana per a l'exercici 2026",
+    "fechaRecepcion": "2026-05-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1104816,
+    "mrr": false,
+    "numeroConvocatoria": "903255",
+    "descripcion": "Ayudas al Impulso a la internacionalización de las empresas de la Comunitat Valenciana afectadas por la DANA 24, ejercicio 2026",
+    "descripcionLeng": "Ajudes a l’Impuls a la internacionalització de les empreses de la Comunitat Valenciana afectades per la dana 24, exercici 2026",
+    "fechaRecepcion": "2026-05-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1104474,
+    "mrr": false,
+    "numeroConvocatoria": "902913",
+    "descripcion": "SA 122526 - DECRETO PARA UNA SUBVENCIÓN DIRECTA CON CARÁCTER EXCEPCIONAL CON LA CORPORACIÓN RADIO TELEVISIÓN ESPAÑOLA, SME (RTVE) PARA LA ORGANIZACIÓN Y CELEBRACIÓN DEL BENIDORM FEST 2026.",
+    "descripcionLeng": "SA 122526 - DECRET PER A UNA SUBVENCIÓ DIRECTA AMB CARÀCTER EXCEPCIONAL AMB LA CORPORACIÓ RÀDIO TELEVISIÓ ESPANYOLA, SME (RTVE) PER A L'ORGANITZACIÓ I CELEBRACIÓ DEL BENIDORM FEST 2026.",
+    "fechaRecepcion": "2026-04-30",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1104427,
+    "mrr": false,
+    "numeroConvocatoria": "902866",
+    "descripcion": "INSTITUT VALENCIÀ DE CONSERVACIÓ, RESTAURACIÓ I INVESTIGACIÓ, PARA LA FINANCIACIÓN DE INVERSIONES Y OPERACIONES DE CAPITAL DE LA ENTIDAD",
+    "descripcionLeng": "INSTITUT VALENCIÀ DE CONSERVACIÓ, RESTAURACIÓ I INVESTIGACIÓ, PER AL FINANÇAMENT D'INVERSIONS I OPERACIONS DE CAPITAL DE L'ENTITAT",
+    "fechaRecepcion": "2026-04-30",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1104032,
+    "mrr": true,
+    "numeroConvocatoria": "902471",
+    "descripcion": "Resolución del presidente del IVACE por la que se convocan ayudas para la ejecución de  programas de incentivos ligados al autoconsumo y al almacenamiento, con fuentes de energía renovable,",
+    "descripcionLeng": "Resolució del president de l'IVACE per la qual es convocquen ajudes per a l'execució de preogrames d'incentius lligats a l'autoconsum i a l'emmagatzenatge, amb fonts d'energia renovable",
+    "fechaRecepcion": "2026-04-29",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1104029,
+    "mrr": false,
+    "numeroConvocatoria": "902468",
+    "descripcion": "RESOLUCIÓN de 28 de abril de 2026, de la Dirección General de Deporte, por la que se convocan subvenciones destinadas a fomentar el deporte universitario y contribuir a la organización del Campeonato Autonómico de D.U. de la C.V(CADU),temporada 2025-2026",
+    "descripcionLeng": "RESOLUCIÓ de 28 d’ abril, del director general d'Esport, per la qual es convoquen subvencions destinades a fomentar l'esport universitari i contribuir a l'organització del Campionat Autonòmic d'Esport Universitari de la C.V (CAEU), temporada 2025-2026",
+    "fechaRecepcion": "2026-04-29",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE RELACIONES INSTITUCIONALES Y TRANSPARENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103956,
+    "mrr": false,
+    "numeroConvocatoria": "902395",
+    "descripcion": "INSTITUT VALENCIÀ D'ART MODERN (IVAM), PARA LA FINANCIACIÓN DE LAS OPERACIONES DE LA ENTIDAD. CAP. VII",
+    "descripcionLeng": "INSTITUT VALENCIÀ D'ART MODERN (IVAM), PER AL FINANÇAMENT DE LES OPERACIONS DE L'ENTIAT. CAP VII",
+    "fechaRecepcion": "2026-04-29",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103865,
+    "mrr": false,
+    "numeroConvocatoria": "902304",
+    "descripcion": "RESOLUCIÓN de 25 de junio de 2025, de la Conselleria de Educación, Cultura, Universidades y Empleo, por la que se aprueban las bases reguladoras de concesión de ayudas económicas, para contribuir a la financiación de gastos de ejecución de proyectos de in",
+    "descripcionLeng": "RESOLUCIÓ de 25 de juny de 2025 de la Conselleria d'Educació, Cultura, Universitats i Ocupació, per la qual s’aproven les bases reguladores per a la concessió d’ajudes econòmiques, per a contribuir al finançament dels gastos d’execució dels projectes d’in",
+    "fechaRecepcion": "2026-04-28",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103785,
+    "mrr": false,
+    "numeroConvocatoria": "902224",
+    "descripcion": "Resolución de 24 de abril de 2026, de la dirección general de Trabajo, Cooperativismo y Seguridad Laboral, por la que se convocan subvenciones en materia de colaboración institucional",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-04-28",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE EMPLEO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103736,
+    "mrr": false,
+    "numeroConvocatoria": "902175",
+    "descripcion": "Resolución de 24 de abril de 2026, de la dirección general de Trabajo, Cooperativismo y Seguridad Laboral, por la que se convocan subvenciones destinadas a las organizaciones sindicales con representación en la Comunitat Valenciana, para el ejercicio 2026",
+    "descripcionLeng": "Resolució de 24 d’abril de 2026, de la direcció general de Treball, Cooperativisme i Seguretat Laboral, per la qual es convoquen subvencions destinades a les organitzacions sindicals amb representació en la Comunitat Valenciana, per a l'exercici 2026.",
+    "fechaRecepcion": "2026-04-28",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE EMPLEO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103697,
+    "mrr": false,
+    "numeroConvocatoria": "902136",
+    "descripcion": "SUBVENCION GASTOS FUNCIONAMIENTO PARTIDOS POLÍTICOS",
+    "descripcionLeng": "SUBVENCIÓ DESPESES FUNCIONAMENT PARTITS POLÍTICS",
+    "fechaRecepcion": "2026-04-28",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SUBSECRETARÍA - CONSELLERIA DE JUSTICIA E INTERIOR",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103678,
+    "mrr": false,
+    "numeroConvocatoria": "902117",
+    "descripcion": "Convocatoria para el año 2026 de las subvenciones de la Modalidad 1 de las subvenciones para la Conservación y Protección de los Bienes Inmuebles del Patrimonio Cultural de la Comunitat Valenciana, las subvenciones para la recuperación de las Construccion",
+    "descripcionLeng": "Convocatòria per a l'any 2026  de les subvencions de la Mdalitat 1 de les subvencions per a la Conservació i Protecció dels Béns immobles del Patrimoni Cultural de la Comunitat Valenciana, les subvencions per a la recuperació de les Construccions de pe",
+    "fechaRecepcion": "2026-04-28",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103355,
+    "mrr": false,
+    "numeroConvocatoria": "901794",
+    "descripcion": "RESOLUCIÓN de la Dirección General de Trabajo, Cooperativismo y Seguridad Laboral, por la que se convocan subvenciones destinadas al fomento de la economía social en el ámbito de la Comunitat Valenciana.",
+    "descripcionLeng": "RESOLUCIÓ de la Direcció General de Treball, Cooperativisme i Seguretat Laboral, per la qual es convoquen subvencions destinades al foment de l’economia social en l’àmbit de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-04-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE EMPLEO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103338,
+    "mrr": false,
+    "numeroConvocatoria": "901777",
+    "descripcion": "RESOLUCIÓN  de la Conselleria de Sanidad, por la que se convocan subvenciones destinadas a financiar programas de salud mental en la Comunitat Valenciana, para el ejercicio 2026.",
+    "descripcionLeng": "RESOLUCIÓ de la Conselleria de Sanitat, per la qual es convoquen subvencions destinades a finançar programes de salut mental en la Comunitat Valenciana, per a l’exercici 2026",
+    "fechaRecepcion": "2026-04-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103133,
+    "mrr": false,
+    "numeroConvocatoria": "901572",
+    "descripcion": "DECRETO 175/2025, de 26 de noviembre, del Consell, ayudas urgentes de alquiler de vivienda para contribuir a paliar los efectos producidos por el  incendio declarado en Valencia el 22 de febrero de 2024",
+    "descripcionLeng": "DECRET 175/2025, de 26 de novembre, del Consell,  d'ajudes urgents de lloguer de vivenda per a contribuir a pal·liar els efectes produïts per l'incendi  declarat a València el 22 de febrer de 2024",
+    "fechaRecepcion": "2026-04-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE VIVIENDA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1103082,
+    "mrr": false,
+    "numeroConvocatoria": "901521",
+    "descripcion": "Resolución de la Conselleria de Educación, Cultura y Universidades, por la que se concede una ayuda al Consorcio Espacial Valenciano (VALESPACE CONSORTIUM) para el fomento de su actividad, en el ejercicio 2026.",
+    "descripcionLeng": "Resolució de la Conselleria d'Educació, Cultura i Universitats, per la qual es concedix una ajuda al Consorci Espacial Valencià (VALESPACE CONSORTIUM) per al foment de la seua activitat, en l'exercici 2026.",
+    "fechaRecepcion": "2026-04-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1102930,
+    "mrr": false,
+    "numeroConvocatoria": "901369",
+    "descripcion": "RESOLUCIÓN de 24 de abril de 2026, de la Conselleria de Educación, Cultura y Universidades por la que se establecen las bases reguladoras y se convocan para el curso 2024-2025 becas GV-TALENT",
+    "descripcionLeng": "RESOLUCIÓ de 24 d'abril de 2026, de la Conselleria d'Educació, Cultura i Universitats per la qual s'establixen les bases reguladores i es convoquen per al curs 2024-2025 beques GV-TALENT",
+    "fechaRecepcion": "2026-04-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1102569,
+    "mrr": true,
+    "numeroConvocatoria": "901008",
+    "descripcion": "RESOLUCIÓN de 23 de abril de 2026, de la Consellera de Industria, Turismo, Innovación y Comercio, por la que se aprueba la convocatoria, por el procedimiento de concurrencia no competitiva, para la concesión de subvenciones para las PYMES 2026.",
+    "descripcionLeng": "RESOLUCIÓ de 23 d'abril de 2026, de la Consellera d'Indústria, Turisme, Innovació i Comerç, per la qual s'aprova la convocatòria, pel procediment de concurrència no competitiva, per a la concessió de subvencions per a les PIMES 2026.",
+    "fechaRecepcion": "2026-04-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE INNOVACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1102385,
+    "mrr": false,
+    "numeroConvocatoria": "900824",
+    "descripcion": "Resolución del director general del Institut Valencià de Cultura, por la que se convocan subvenciones de carácter bienal a salas de exhibición y teatros con programación estable de teatro, danza y circo para los ejercicios 2026 y 2027",
+    "descripcionLeng": "Resolució del director general de l’Institut Valencià de Cultura, per la qual es convoquen subvencions de caràcter biennal a sales d’exhibició i teatres amb programació estable de teatre, dansa i circ per als exercicis 2026 i 2027.",
+    "fechaRecepcion": "2026-04-22",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1102349,
+    "mrr": false,
+    "numeroConvocatoria": "900788",
+    "descripcion": "RESOLUCIÓN de 10 de abril de 2026, por la que se regula y concede una subvención directa a la Universitat de València para la promoción i fomento de actividades de interés público, sociocultural, económico o humanitario de la Comunitat Valenciana.",
+    "descripcionLeng": "RESOLUCIÓ de 10 d'abril de 2026, per la qual es regula i concedix una subvenció directa a la Universitat de València per a la promoció i el foment d’activitats d’interés públic, sociocultural, econòmic o humanitari de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-04-22",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE PRESIDENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1102228,
+    "mrr": false,
+    "numeroConvocatoria": "900667",
+    "descripcion": "LÍNEA DE FINANCIACIÓN PRÉSTAMOS BONIFICADOS IVF LIQUIDEZ ANTICRISIS 2026",
+    "descripcionLeng": "LÍNIA DE FINANÇAMENT PRÉSTECS BONIFICATS LIQUIDESA ANTICRISI 2026",
+    "fechaRecepcion": "2026-04-22",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1102179,
+    "mrr": false,
+    "numeroConvocatoria": "900618",
+    "descripcion": "Resolución de la Conselleria de Sanidad, por la que se convocan subvenciones destinadas a financiar acciones en materia de recursos humanos para impulsar la investigación sanitaria, biomédica y de salud pública para el ejercicio 2026.",
+    "descripcionLeng": "Resolució de la Conselleria de Sanitat, por la que es convoquen subvencions destinades a finançar accions en matèria de recursos humans per a impulsar la investigació sanitària, biomèdica i de salut pública per a l'exercici 2026",
+    "fechaRecepcion": "2026-04-22",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EFICIENCIA Y TECNOLOGÍA SANITARIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1101992,
+    "mrr": false,
+    "numeroConvocatoria": "900431",
+    "descripcion": "DECRETO 39/2026, de 13 de marzo, del Consell, de concesión y gestión de la subvención destinada a las actuaciones realizadas por las personas profesionales de la abogacía derivadas de la actuación en los servicios de orientación jurídica de proximidad",
+    "descripcionLeng": "DECRET 39/2026, de 13 de març, del Consell, de concessió i gestió de la subvenció destinada a les actuacions realitzades per les persones professionals de l’advocacia derivades de l’actuació en els servicis d’orientació jurídica de proximitat",
+    "fechaRecepcion": "2026-04-21",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1101535,
+    "mrr": false,
+    "numeroConvocatoria": "899974",
+    "descripcion": "Resolución de 20 de abril de 2026, de la Vicepresidencia Segunda y Consellería de Presidencia por la que se convocan dos becas para la realización de estudios de postgrado en el Colegio de Europa",
+    "descripcionLeng": "Resolució de 20 d'abril de 2026, de la Vicepresidència Segona i Conselleria de Presidència per la qual es convoquen dos beques per a la realització d'estudis de postgrau en el Col·legi d'Europa",
+    "fechaRecepcion": "2026-04-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE REPRESENTACIÓN ANTE LA UNIÓN EUROPEA Y LAS COMUNIDADES AUTÓNOMAS",
+    "codigoInvente": null
+  },
+  {
+    "id": 1101276,
+    "mrr": false,
+    "numeroConvocatoria": "899715",
+    "descripcion": "Convocatoria para la ejecución de proyectos singulares en el ámbito del deporte y la actividad física para el 2026",
+    "descripcionLeng": "Convocatòria per a l'execució de projectes singulars en l'àmbit de l'esport i l'activitat física per al 2026",
+    "fechaRecepcion": "2026-04-17",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE RELACIONES INSTITUCIONALES Y TRANSPARENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1101135,
+    "mrr": false,
+    "numeroConvocatoria": "899574",
+    "descripcion": "Subvenciones para proyectos de cooperación universitaria al desarrollo (CUD) y voluntariado internacional- S2050",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-04-17",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1101011,
+    "mrr": false,
+    "numeroConvocatoria": "899450",
+    "descripcion": "RESOLUCIÓN, de la Conselleria de Servicios Sociales, Familia e Infancia, por la que se convocan para el ejercicio 2026 las subvenciones en materia programas de atención a personas mayores y el mundo rural.",
+    "descripcionLeng": "RESOLUCIÓ, de la Conselleria de Servicis Socials, Família i Infància, per la qual es convoquen per a l’exercici 2026 les subvencions en matèria de programes d’atenció a persones majors i el món rural",
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100963,
+    "mrr": false,
+    "numeroConvocatoria": "899402",
+    "descripcion": "Resolución de 14 de abril de 2026, de la presidenta del IVACE, por la que se convocan las Becas IVACE Exterior 2027 en materias relacionadas con la internacionalización de las empresas dirigidas a personas con titulación universitaria",
+    "descripcionLeng": "Resolució de 14 d'abril de 2026, de la presidenta de l'IVACE, per la qual es convoquen les Beques IVACE Exterior 2027 en matèries relacionades amb la internacionalització de les empreses dirigides a persones amb titulació universitària",
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1100946,
+    "mrr": false,
+    "numeroConvocatoria": "899385",
+    "descripcion": "RESOLUCIÓN de 16 abril de 2026 del conseller de Sanidad, por la que se convocan subvenciones destinadas a financiar el tratamiento de lucha contra vectores de relevancia en salud pública en los municipios de la Comunitat Valenciana en el ejercicio 2026.",
+    "descripcionLeng": "RESOLUCIÓ de 16 d'abril de 2026 del conseller de Sanitat, per la qual es convoquen subvencions destinades a finançar el tractament de lluita contra vectors de rellevància en salut pública en els municipis de la Comunitat Valenciana en l'exercici 2026.",
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100938,
+    "mrr": false,
+    "numeroConvocatoria": "899377",
+    "descripcion": "RESOLUCIÓN  del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones destinadas a la contratación de personas desempleadas menores de 30 años por mancomunidades de la Comunita",
+    "descripcionLeng": "RESOLUCIÓ  del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen per a l’exercici 2026 les subvencions destinades a contractar persones desocupades menors de 30 anys per mancomunitats de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100910,
+    "mrr": false,
+    "numeroConvocatoria": "899349",
+    "descripcion": "RESOLUCIÓN de fecha de 2026, de la Conselleria de Educación, Cultura y Universidades, por la que se convocan para el año 2026 subvenciones para actuaciones de modernización, conservación, equipamiento y adecuación de infraestructuras de museos y c",
+    "descripcionLeng": "RESOLUCIÓ de data de 2026, de la Conselleria d’Educació, Cultura i Universitats, per la qual es convoquen per a l’any 2026 subvencions per a actuacions de modernització, conservació, equipament i adequació d’infraestructures de museus i col·lecc",
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100832,
+    "mrr": false,
+    "numeroConvocatoria": "899271",
+    "descripcion": "RESOLUCIÓN de 16 abril de 2026, del director de la Agencia Valenciana de Fomento y Garantía Agraria, por la que se convocan las ayudas de intervención en el sector apícola para el ejercicio 2026 en la Comunitat Valenciana",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-04-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE FOMENTO Y GARANTÍA AGRARIA",
+    "codigoInvente": "INV00000152"
+  },
+  {
+    "id": 1100692,
+    "mrr": false,
+    "numeroConvocatoria": "899131",
+    "descripcion": "RESOLUCIÓN de 14 de abril de 2026,de la Conselleria de Economía, Hacienda y Administración Pública, por la que se convocan para el ejercicio 2026 subvenciones destinadas a la financiación de planes de formación personal de la Administración Local de la CV",
+    "descripcionLeng": "RESOLUCIÓ de 14 d’abril de 2026, de la Conselleria d'Economia, Hisenda i Administració Pública, per la qual es convoquen per a l'exercici 2026 subvencions destinades al finançament de plans de formació per al personal de l'Administració local de la CV",
+    "fechaRecepcion": "2026-04-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE ADMINISTRACIÓN PÚBLICA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100668,
+    "mrr": false,
+    "numeroConvocatoria": "899107",
+    "descripcion": "S03370 AYUDAS ECONOMICAS PARA EL FOMENTO DE LA IGUALDAD DE OPORTUNIDADES ENTRE MUJERES Y HOMBRES EN LA C.V EJERCICIO 2026",
+    "descripcionLeng": "S03370 AJUDES ECONÒMIQUES PER AL FOMENT  DE LA IGUALTAT DE OPORTUNITATS ENTRE DONES I HÒMENS EN LA C.V. PER AL EXERCICI 2026",
+    "fechaRecepcion": "2026-04-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100652,
+    "mrr": false,
+    "numeroConvocatoria": "899091",
+    "descripcion": "RESOLUCIÓN, del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria del programa mixto de empleo formación Talento Joven Garantía Juvenil para la recuperación de los municipios de la Comunitat Valenc",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació per la qual s’aprova la convocatòria del programa mixt d’ocupació-formació Talent Jove Garantia Juvenil per a la recuperació dels municipis de la Comunitat Valenciana afectats",
+    "fechaRecepcion": "2026-04-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100627,
+    "mrr": false,
+    "numeroConvocatoria": "899066",
+    "descripcion": "Solicitud de ayuda y pago de las actuaciones de la persona mediadora designada por el Centro de Mediación de la C. V. en las sesiones informativas y en los procedimientos de mediación intrajudicial realizadas en el ámbito de la Comunitat Valenciana",
+    "descripcionLeng": "Sol·licitud d'ajuda i pagament de les actuacions de la persona mediadora designada pel Centre de Mediació de la C. V. en les sessions informatives i en els procediments de mediació intrajudicial realitzades en l'àmbit de la Comunitat Valenciana",
+    "fechaRecepcion": "2026-04-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1100486,
+    "mrr": false,
+    "numeroConvocatoria": "898925",
+    "descripcion": "RESOLUCIÓN de 14 de abril de 2026, de la Conselleria de Industria, Turismo, Innovación y Comercio, por la que se efectúa la convocatoria de subvenciones para actividades no económicas, desarrolladas por entidades del ecosistema de emprendimiento de la CV",
+    "descripcionLeng": "RESOLUCIÓ de 14 d'abril de 2026, de la Conselleria d’Indústria, Turisme, Innovació i Comerç, per la qual s’efectua la convocatòria de subvencions per a activitats no econòmiques, desenvolupades per entitats de l’ecosistema d’emprenedoria de la CV",
+    "fechaRecepcion": "2026-04-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1099692,
+    "mrr": false,
+    "numeroConvocatoria": "898131",
+    "descripcion": "RESOLUCIÓN de 30 de diciembre de 2025, por la que se aprueban las bases reguladoras y la convocatoria de ayudas económicas en concepto de subvención dirigidas a los centros docentes privados concertados sostenidos con fondos públicos para la adquisición d",
+    "descripcionLeng": "RESOLUCIÓ de 30 de desembre de 2025, per la qual s’aproven les bases reguladores i la convocatòria d’ajudes econòmiques en concepte de subvenció dirigides als centres docents privats concertats sostinguts amb fons públics per a l’adquisició d’equipament d",
+    "fechaRecepcion": "2026-04-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SUBSECRETARÍA - CONSELLERIA DE EDUCACIÓN, UNIVERSIDADES Y EMPLEO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1099621,
+    "mrr": false,
+    "numeroConvocatoria": "898060",
+    "descripcion": "RESOLUCIÓN de 8 de abril de 2026, de la presidenta del Instituto Valenciano de Competitividad Empresarial (IVACE), por la que se convocan ayudas destinadas al fomento de instalaciones de autoconsumo de energía eléctrica en los municipios de la C.V., 2026",
+    "descripcionLeng": "RESOLUCIÓ de 8 d’abril de 2026, de la presidenta de l'Institut Valencià de Competitivitat Empresarial (IVACE), per la qual es convoquen ajudes destinades al foment d'instal·lacions d'autoconsum d'energia elèctrica en els municipis de la C.V.,2026.",
+    "fechaRecepcion": "2026-04-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1099459,
+    "mrr": false,
+    "numeroConvocatoria": "897898",
+    "descripcion": "CUOTA ANUAL CONFERENCIA REGIONES PERIFÉRICAS Y MARÍTIMAS DE EUROPA (CRPM)",
+    "descripcionLeng": "QUOTA ANUAL CONFERÈNCIA REGIONS PERIFÈRIQUES I MARÍTIMES D'EUROPA (CRPM)",
+    "fechaRecepcion": "2026-04-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE REPRESENTACIÓN ANTE LA UNIÓN EUROPEA Y LAS COMUNIDADES AUTÓNOMAS",
+    "codigoInvente": null
+  },
+  {
+    "id": 1099328,
+    "mrr": false,
+    "numeroConvocatoria": "897767",
+    "descripcion": "RESOLUCIÓN de la directora general de Comercio, Artesanía y Consumo, por la cual se efectúa la convocatoria anticipada para el ejercicio 2023 de las ayudas en materia de comercio, consumo y artesanía.",
+    "descripcionLeng": "RESOLUCIÓ de la directora general de Comerç, Artesania i Consum, per la qual s'efectua la convocatòria anticipada per a l'exercici 2023 de les ajudes en matèria de comerç, consum i artesania.",
+    "fechaRecepcion": "2026-04-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1099278,
+    "mrr": false,
+    "numeroConvocatoria": "897717",
+    "descripcion": "DECRETO 202/2024, de 30 de diciembre, del Consell, por el que se aprueban las bases reguladoras de las ayudas dirigidas a complementar las prestaciones del Mecanismo RED de flexibilidad y estabilización del empleo para el sector de la automoción de la Com",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-04-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1099242,
+    "mrr": false,
+    "numeroConvocatoria": "897681",
+    "descripcion": "Ayudas para apoyar aquellas actuaciones desarrolladas por entidades gestoras de áreas industriales de la Comunitat Valenciana, que impulsen la modernización y la mejora de  la gestión de estas infraestructuras industriales. INENT2 2026",
+    "descripcionLeng": "Ajudes per a donar suport a aquelles actuacions desenvolupades per entitats gestores d'àrees industrials de la Comunitat Valenciana, que impulsen la modernització i la millora de la gestió d'estes infraestructures industrials. INENT2 2026",
+    "fechaRecepcion": "2026-04-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098993,
+    "mrr": false,
+    "numeroConvocatoria": "897432",
+    "descripcion": "S1176 AYUDAS ECONÓMICAS PARA EL FOMENTO DEL MOVIMIENTO ASOCIATIVO DE MUJERES Y PARA LA PROMOCIÓN DE LA IGUALDAD ENTRE MUJERES Y HOMBRES  EN LA C.V. PARA EL EJERCICIO 2026",
+    "descripcionLeng": "S1176 AJUDES ECONÒMIQUES PER AL FOMENT DEL MOVIMENT ASSOCIATIU DE DONES I PER A LA PROMOCIÓ DE LA IGUALTAT ENTRE DONES I HÒMENS EN LA C.V. PER AL EXERCICI 2026",
+    "fechaRecepcion": "2026-04-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098840,
+    "mrr": false,
+    "numeroConvocatoria": "897279",
+    "descripcion": "RESOLUCIÓN 7 de abril de 2026 del director de la Agencia Valenciana de Fomento y Garantía Agraria, por la que se convocan ayudas a la cosecha en verde de la uva con destino a vinificación, año 2026",
+    "descripcionLeng": "RESOLUCIÓ de 7 d'abril de 2026, del director de l'Agència Valenciana de Foment i Garantia Agrària, per la qual es convoquen ajudes a la collita en verd del raïm amb destinació a vinificació, any 2026.",
+    "fechaRecepcion": "2026-04-07",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE FOMENTO Y GARANTÍA AGRARIA",
+    "codigoInvente": "INV00000152"
+  },
+  {
+    "id": 1098736,
+    "mrr": false,
+    "numeroConvocatoria": "897175",
+    "descripcion": "RESOLUCIÓN de la Presidencia de la Agencia Valenciana de Seguridad y Respuesta a las Emergencias, por la cual se convocan las subvenciones para el ejercicio 2026, destinadas a la financiación de los gastos de equipamiento y los seguros de los voluntarios",
+    "descripcionLeng": "RESOLUCIÓ de la Presidència de l'Agència Valenciana de Seguretat i Resposta a les Emergències, per la qual es convoquen les subvencions per a l'exercici 2026 destinades al finançament dels gastos d'equipament i les assegurances dels voluntaris",
+    "fechaRecepcion": "2026-04-07",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE SEGURIDAD Y RESPUESTA A LAS EMERGENCIAS (AVSRE)",
+    "codigoInvente": "INV00000156"
+  },
+  {
+    "id": 1098424,
+    "mrr": false,
+    "numeroConvocatoria": "896863",
+    "descripcion": "Convocatoria de ayudas para la redacción de planes de acción para el clima y la energía sostenible (PACES), de los municipios de la Comunitat Valenciana, adheridos al Pacto de las Alcaldías",
+    "descripcionLeng": "Convocatòria d'ajudes per a la redacció de plans d'acció per al clima i l'energia sostenible (PACES), dels municipis de la Comunitat Valenciana, adherits al Pacte de les Alcaldies",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE MEDIO AMBIENTE  Y TERRITORIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098415,
+    "mrr": false,
+    "numeroConvocatoria": "896854",
+    "descripcion": "FUNDACIÓN CV PALAU DE LES ARTS, PARA LA FINANCIACIÓN DE LOS GASTOS DE FUNCIONAMIENTO Y ACTIVIDADES DE LA ENTIDAD",
+    "descripcionLeng": "FUNDACIÓ CV PALAU DE LES ARTS, PER A LA FINANÇAMENT  DELS GASTOS DE FUNCIONAMENT I ACTIVITATS DE L'ENTITAT",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098406,
+    "mrr": false,
+    "numeroConvocatoria": "896845",
+    "descripcion": "Convocatoria de ayudas a actuaciones para la soberanía energética de los municipios y la resiliencia",
+    "descripcionLeng": "Convocatòria  d'ajudes a actuacions per a la sobirania energètica dels municipis i la resiliència del terr",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE MEDIO AMBIENTE  Y TERRITORIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098378,
+    "mrr": false,
+    "numeroConvocatoria": "896817",
+    "descripcion": "Convenio de colaboración entre la Generalitat y la Confederación Sindical de Comisiones Obreras del País Valencià, para la realización de actividades formativas en materia de servicios sociales durante el ejercicio 2024.",
+    "descripcionLeng": "Conveni de col·laboració entre la Generalitat i la Confederació Sindical de Comissions Obreres del País *Valencià, per a la realització d'activitats formatives en matèria de servicis socials durant l'exercici 2024.",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098376,
+    "mrr": false,
+    "numeroConvocatoria": "896815",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y LA PLATAFORMA DEL TERCER SECTOR DE LA COMUNITAT VALENCIANA",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I LA PLATAFORMA DEL TERCER SECTOR DE LA COMUNITAT VALENCIANA",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098372,
+    "mrr": false,
+    "numeroConvocatoria": "896811",
+    "descripcion": "RESOLUCIÓN del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria para la concesión de subvenciones para la realización de acciones formativas de economía verde, sector de la construcción y rehabili",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual s’aprova la convocatòria per a la concessió de subvencions per a la realització d’accions formatives d’economia verda, sector de la construcció i rehabilitació d’",
+    "fechaRecepcion": "2026-04-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098217,
+    "mrr": false,
+    "numeroConvocatoria": "896656",
+    "descripcion": "RESOLUCIÓN, del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria para la concesión de becas y ayudas para las personas trabajadoras desempleadas que participen en acciones formativas financiadas e",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d'Ocupació i Formació, per la qual s'aprova la convocatòria per a la concessió de beques i ajudes per a les persones treballadores desocu-pades que participen en accions formatives finançades en el",
+    "fechaRecepcion": "2026-04-01",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098209,
+    "mrr": false,
+    "numeroConvocatoria": "896648",
+    "descripcion": "Resolución del director general de Labora Servicio Valenciano de Empleo y Formación,por la que se aprueba la convocatoria de subvenciones para la realización de acciones formativas no conducentes a certificados profesionales",
+    "descripcionLeng": "Resolució del director general de Labora Servici Valencià d’Ocupació i Formació per la qual s’aprova la convocatòria de subvencions per a realitzar accions formatives no conduents a certificats professionals dirigides prioritàriament a persones ocupades p",
+    "fechaRecepcion": "2026-04-01",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098150,
+    "mrr": false,
+    "numeroConvocatoria": "896589",
+    "descripcion": "RESOLUCIÓN del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria para la concesión de subvenciones para la realización de acciones formativas conducentes a certificados profesionales y dirigidas pr",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual s’aprova la convocatòria per a la concessió de subvencions per a la realització d’accions formatives conduents a certificats professionals i dirigides prioritària",
+    "fechaRecepcion": "2026-04-01",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098142,
+    "mrr": false,
+    "numeroConvocatoria": "896581",
+    "descripcion": "RESOLUCIÓN del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones destinadas a la contratación de mujeres desempleadas por ayuntamientos de la Comunitat Valenciana",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen per a l’exercici 2026 les subvencions destinades a contractar dones desocupades per ajuntaments de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-04-01",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098043,
+    "mrr": false,
+    "numeroConvocatoria": "896482",
+    "descripcion": "CUSMCO",
+    "descripcionLeng": "CUSMCO",
+    "fechaRecepcion": "2026-03-31",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1098020,
+    "mrr": false,
+    "numeroConvocatoria": "896459",
+    "descripcion": "CUSMRE",
+    "descripcionLeng": "CUSMRE",
+    "fechaRecepcion": "2026-03-31",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097999,
+    "mrr": false,
+    "numeroConvocatoria": "896438",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y EL COLEGIO OFICIAL DE FISIOTERAPEUTAS CV, EL COLEGIO OFICIAL DE LOGOPEDAS CV, EL COLEGIO OFICIAL TERAPEUTAS OCUPACIONALES CV Y EL CONSEJO DE ENFERMERÍA CV",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I EL COL·LEGI OFICIAL DE FISIOTERAPEUTES CV, EL COL·LEGI OFICIAL DE LOGOPEDES CV, EL COL·LEGI OFICIAL TERAPEUTES OCUPACIONALS CV I EL CONSELL D'INFERMERIA CV",
+    "fechaRecepcion": "2026-03-31",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097851,
+    "mrr": false,
+    "numeroConvocatoria": "896290",
+    "descripcion": "RESOLUCIÓN del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones destinadas a la contratación de personas desempleadas menores de 30 años",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual es convoquen per a l’exercici 2026 les subvencions destinades a contractar persones desocupades menors de 30 anys per ajuntaments",
+    "fechaRecepcion": "2026-03-31",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097756,
+    "mrr": false,
+    "numeroConvocatoria": "896195",
+    "descripcion": "RESOLUCIÓN del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria para la concesión de subvenciones para la realización de acciones formativas no conducentes a certificados profesionales dirigidas p",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual s’aprova la convocatòria per a la concessió de subvencions per a la realització d’accions formatives no conduents a certificats professionals dirigides prioritàri",
+    "fechaRecepcion": "2026-03-30",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097734,
+    "mrr": false,
+    "numeroConvocatoria": "896173",
+    "descripcion": "RESOLUCIÓN del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria para la concesión de subvenciones para la realización de acciones formativas conducentes a certificados prof",
+    "descripcionLeng": "RESOLUCIÓ del director general de Labora Servici Valencià d’Ocupació i Formació, per la qual s’aprova la convocatòria per a la concessió de subvencions per a realitzar accions formatives conduents a certificats prof",
+    "fechaRecepcion": "2026-03-30",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097474,
+    "mrr": false,
+    "numeroConvocatoria": "895913",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y EL CENTRO ASOCIADO A LA UNED ALZIRA-VALENCIA FRANCISCO TOMÁS Y VALIENTE",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I EL CENTRE ASSOCIAT A LA *UNED ALZIRA-VALÈNCIA FRANCISCO TOMÁS I VALENTA",
+    "fechaRecepcion": "2026-03-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097456,
+    "mrr": false,
+    "numeroConvocatoria": "895895",
+    "descripcion": "CONVENIO COLABORACIÓN  ENTRE GENERALITAT CON LA UNIVERSITAT VALÈNCIA, UNIVERSITAT POLITÈCNICA VALÈNCIA,UNIVERSIDAD ALICANTE, UNIVERSITAT JAUME I Y UNIVERSITAD MIGUEL HERNANDEZ DE ELCHE",
+    "descripcionLeng": "CONVENI COL·LABORACIÓ ENTRE GENERALITAT AMB LA UNIVERSITAT VALÈNCIA, UNIVERSITAT POLITÈCNICA VALÈNCIA,UNIVERSITAT ALACANT, UNIVERSITAT JAUME I UNIVERSITAD MIGUEL HERNANDEZ D'ELX",
+    "fechaRecepcion": "2026-03-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097232,
+    "mrr": false,
+    "numeroConvocatoria": "895671",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y LA ASOCIACIÓN EMPRESARIAL DE RESIDENCIAS Y SERVICIOS A PERSONAS DEPENDIENTES DE LA COMUNITAT VALENCIANA",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I L'ASSOCIACIÓ EMPRESARIAL DE RESIDÈNCIES I SERVICIS A PERSONES DEPENDENTS DE LA COMUNITAT VALENCIANA",
+    "fechaRecepcion": "2026-03-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1097229,
+    "mrr": false,
+    "numeroConvocatoria": "895668",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y LA ASOCIACIÓN LARES COMUNIDAD VALENCIANA UNIÓN DE RESIDENCIAS Y SERVICIOS DEL SECTOR SOLIDARIO",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I L'ASSOCIACIÓ LARES COMUNITAT VALENCIANA UNIÓ DE RESIDÈNCIES I SERVICIS DEL SECTOR SOLIDARI",
+    "fechaRecepcion": "2026-03-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096952,
+    "mrr": false,
+    "numeroConvocatoria": "895391",
+    "descripcion": "RESOLUCIÓN del 25 de marzo de 2026, del director general del Institut Valencià de Cultura, por la cual se convocan subvenciones a la escritura de guion y al desarrollo y preparación de proyectos de obras audiovisuales del Institut Valencià de Cultura para",
+    "descripcionLeng": "RESOLUCIÓ de 25 de març de 2026, del director general de l’Institut Valencià de Cultura, per la qual es convoquen subvencions a l’escriptura de guió i al desenrotllament i la preparació de projectes d’obres audiovisuals de l’Institut Valencià de Cultura p",
+    "fechaRecepcion": "2026-03-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1096886,
+    "mrr": false,
+    "numeroConvocatoria": "895325",
+    "descripcion": "S1589 premios Construyendo Municipios Igualitarios de la Comunitat Valenciana: Fem Igualtat. Fem Comunitat",
+    "descripcionLeng": "S1589 premis Construint Municipis Igualitaris de la Comunitat Valenciana: Fem Igualtat. Fem Comunitat",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096856,
+    "mrr": false,
+    "numeroConvocatoria": "895295",
+    "descripcion": "S1747 AYUDAS ECONÓMICAS DESTINADAS A FAVORECER LA ELABORACIÓN E IMPLANTACIÓN DE PLANES DE IGUALDAD EN EMPRESAS DE LA C.V CON UNA PLANTILLA ENTRE 10 Y 49 PERSONAS TRABAJADORAS",
+    "descripcionLeng": "S1747 AJUDES ECONÒMIQUES DESTINADES A AFAVORIR L'ELABORACIÓ I IMPLANTACIÓ DE PLANS D'IGUALTAT EN EMPRESES DE LA C.V AMB UNA PLANTILLA ENTRE 10 I 49 PERSONES TREBALLADORES",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096855,
+    "mrr": false,
+    "numeroConvocatoria": "895294",
+    "descripcion": "S1590 y S1591 Convocatoria de subvenciones 2026 dirigidas a financiar proyectos de cooperación al desarrollo para la promoción de alianzas estratégicas con países estructuralmente empobrecidos",
+    "descripcionLeng": "S1590 i S1591 Convocatòria de subvencions 2026 dirigides a finançar projectes de cooperació al desenrotllament per a la promoció d'aliances estratègiques amb països estructuralment empobrits",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096809,
+    "mrr": false,
+    "numeroConvocatoria": "895248",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT Y EL COL·LEGI OFICIAL D’ EDUCADORES I EDUCADORS SOCIALS CV, COL·LEGI OFICIAL DE PSICOLOGIA CV, COLEGIO OFICIAL DE TRABAJO SOCIAL DE ALICANTE, VLC Y CST",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT I EL COL·LEGI OFICIAL D’ EDUCADORS I EDUCADORS SOCIALS CV, COL·LEGI OFICIAL DE PSICOLOGIA CV, COL·LEGI OFICIAL DE TREBALL SOCIAL D'ALACANT, VLC I CST",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096806,
+    "mrr": false,
+    "numeroConvocatoria": "895245",
+    "descripcion": "Ayudas a colegios profesionales, asociaciones empresariales y asociaciones profesionales de la Comunitat Valenciana destinadas a la realización de acciones de formación en materia de innovación disruptiva e IA",
+    "descripcionLeng": "Ajudes a col·legis professionals, associacions empresarials i associacions professionals de la Comunitat Valenciana destinades a la realització d'accions de formació en matèria d'innovació disruptiva i IA",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE INNOVACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096796,
+    "mrr": false,
+    "numeroConvocatoria": "895235",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT, A TRAVÉS DE LA VICEPRESIDENCIA Y CONSELLERIA DE SERVICIOS SOCIALES, IGUALDAD Y VIVIENDA, Y LA UNIVERSIDAD DE ALICANTE, LA UNIVERSITAT JAUME I, LA UNIVERSIDAD MIGUEL HERNÁNDEZ, LA UNIVERSITAT POLITÈCNICA DE VA",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT, A TRAVÉS DE LA VICEPRESIDÈNCIA I CONSELLERIA DE SERVICIS SOCIALS, IGUALTAT I VIVENDA, I LA UNIVERSITAT D’ALACANT, LA UNIVERSITAT JAUME I, LA UNIVERSITAT MIGUEL HERNÁNDEZ, LA UNIVERSITAT POLITÈCNICA DE VALÈNCI",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096736,
+    "mrr": false,
+    "numeroConvocatoria": "895175",
+    "descripcion": "RESOLUCIÓN DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA, POR LA QUE SE CONVOCAN LAS AYUDAS PARA MEJORAR EL POSICIONAMIENTO DEL SECTOR TURÍSTICO PARA EL AÑO 2026. PROGRAMA 1.",
+    "descripcionLeng": "RESOLUCIO DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA, PER LA CUAL ES CONVOQUEN LES AJUDES PER A MILLORAR EL POSICIONAMENT DEL SECTOR TURISTIC PER A L'ANY 2026-PROGRAMA 1",
+    "fechaRecepcion": "2026-03-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1096625,
+    "mrr": false,
+    "numeroConvocatoria": "895064",
+    "descripcion": "Asimilación de tecnologías avanzadas y su difusión en el Sistema Valenciano de Innovación REG (UE) 651/2014",
+    "descripcionLeng": "Assimilació de tecnologies avançades i la seua difusió en el Sistema Valencià d'Innovació REG (UE) 651/2014",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096623,
+    "mrr": false,
+    "numeroConvocatoria": "895062",
+    "descripcion": "Consolidación de la cadena de valor empresarial REG (UE) 651/2014",
+    "descripcionLeng": "Consolidació de la Cadena de Valor Empresarial  REG (UE) 651/2014",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096622,
+    "mrr": false,
+    "numeroConvocatoria": "895061",
+    "descripcion": "Impulso a la compra pública innovadora (CPI) REGIMEN 651",
+    "descripcionLeng": "Impuls a la Compra Pública Innovadora (CPI) REGIM 651",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096621,
+    "mrr": false,
+    "numeroConvocatoria": "895060",
+    "descripcion": "Impulso a la compra pública innovadora (CPI)REG MINIMIS 2023/2831",
+    "descripcionLeng": "Impuls a la Compra Pública Innovadora (CPI)REG MINIMIS 2023/2831",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096620,
+    "mrr": false,
+    "numeroConvocatoria": "895059",
+    "descripcion": "Impulso a la compra pública innovadora (CPI) L2 NO AYUDAS DEL ESTADO",
+    "descripcionLeng": "Impuls a la Compra Pública Innovadora (CPI) L2 NO AJUDES DE L´ESTAT",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096619,
+    "mrr": false,
+    "numeroConvocatoria": "895058",
+    "descripcion": "Proyectos estratégicos en cooperación STEP  REG (UE) 651/2014",
+    "descripcionLeng": "Projectes estratègics en cooperació  STEP REG (UE) 651/2014",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096618,
+    "mrr": false,
+    "numeroConvocatoria": "895057",
+    "descripcion": "Proyectos estratégicos en cooperación STEP  NO AYUDAS DEL ESTADO",
+    "descripcionLeng": "Projectes estratègics en cooperació STEP -  NO AJUDES DE L'ESTAT",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096616,
+    "mrr": false,
+    "numeroConvocatoria": "895055",
+    "descripcion": "Acciones complementarias de impulso y fortalecimiento de la innovación. MINIMIS",
+    "descripcionLeng": "Accions complementàries d'impuls i enfortiment de la innovació. MINIMIS",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096615,
+    "mrr": false,
+    "numeroConvocatoria": "895054",
+    "descripcion": "Acciones complementarias de impulso y fortalecimiento de la innovación NO AYUDA ESTADO",
+    "descripcionLeng": "Accions complementàries d'impuls i enfortiment de la innovació. NO AJUDA ESTAT",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096611,
+    "mrr": false,
+    "numeroConvocatoria": "895050",
+    "descripcion": "Promoción del Talento REG (UE) MINIMIS 2023/2831",
+    "descripcionLeng": "Promoció del Talent REG (UE) MINIMIS 2023/2831",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096609,
+    "mrr": false,
+    "numeroConvocatoria": "895048",
+    "descripcion": "Promoción del Talento - No ayudas del Estado",
+    "descripcionLeng": "Promoció del Talent -  No ajudes de l'Estat",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096607,
+    "mrr": false,
+    "numeroConvocatoria": "895046",
+    "descripcion": "Valorización y transferencia de resultados de investigación a las empresas. NO AYUDAS DEL ESTADO",
+    "descripcionLeng": "Valorització i transferència de resultats d´investigació a les empreses. NO AJUDES DE L´ESTAT",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE LA INNOVACIÓN",
+    "codigoInvente": "INV00000153"
+  },
+  {
+    "id": 1096468,
+    "mrr": false,
+    "numeroConvocatoria": "894907",
+    "descripcion": "Resolución de 23 de marzo de 2026, de la Presidencia del IVACE, por la que se convocan subvenciones a empresas para proyectos de innovación de pyme (INNOVA-CV) para el ejercicio 2026, con financiación de la U. E. a través del FEDER",
+    "descripcionLeng": "Resolució de 23 de març de 2026, de la Presidència de l'IVACE, per la qual es convoquen subvencions a empreses per a projectes d'innovació de pime (INNOVA-CV) per a l'exercici 2026, amb finançament de la U.E. a través del FEDER",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1096347,
+    "mrr": false,
+    "numeroConvocatoria": "894786",
+    "descripcion": "S0429.- AYUDAS AÑO 2026 A ARMADORES Y PESCADORES DE BUQUES PESQUEROS C.V., AFECTADOS POR LA PARALIZACIÓN TEMPORAL DE LA ACTIVIDAD PESQUERA",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096345,
+    "mrr": false,
+    "numeroConvocatoria": "894784",
+    "descripcion": "Resolución del director general de Labora Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones destinadas a financiar el mantenimiento de los agentes de Empleo y Desarrollo Local en la Comunitat Valenci",
+    "descripcionLeng": "Resolució del director general de Labora Servei Valencià d’Ocupació i Formació, per la qual es convoquen per a l’exercici 2026 les subvencions destinades a finançar el manteniment dels agents d’ocupació i desenrotllament local en la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-03-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096186,
+    "mrr": false,
+    "numeroConvocatoria": "894625",
+    "descripcion": "Resolución del director general de Labora-Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria del programa mixto de empleo formación Talleres de Empleo para mujeres, con cargo al ejercicio presupuestario 2026, en aplicación d",
+    "descripcionLeng": "Resolució del director general de Labora Servici Valencià d’Ocupació i Formació per la qual s’aprova la convocatòria del programa mixt d’ocupació formació Tallers d’Ocupació per a dones, amb càrrec a l’exercici pressupostari 2026, en aplicació de l’Orde 2",
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096175,
+    "mrr": false,
+    "numeroConvocatoria": "894614",
+    "descripcion": "Resolución del conseller de Sanidad por la que se convocan subvenciones destinadas a financiar los programas de ayuda y autoayuda relacionados con la mejora de la calidad de vida de los/las pacientes de la Comunitat Valenciana para el año 2026.",
+    "descripcionLeng": "Resolució del conseller de Sanitat per la qual es convoquen les ajudes destinades a finançar els programes d’ajuda i autoajuda relacionats amb la millora de la qualitat de vida dels pacients i les pacients de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EFICIENCIA Y TECNOLOGÍA SANITARIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096130,
+    "mrr": false,
+    "numeroConvocatoria": "894569",
+    "descripcion": "S1749 PREMIOS CONCILIANT COMUNITAT VALENCIANA",
+    "descripcionLeng": "S1749 PREMIS CONCILIANT COMUNITAT VALENCIANA",
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1096089,
+    "mrr": false,
+    "numeroConvocatoria": "894528",
+    "descripcion": "RESOLUCIÓN del director general del Institut Valencià de Cultura por la que se convocan subvenciones destinadas al fomento de actividades musicales para 2026",
+    "descripcionLeng": "RESOLUCIÓ del director general de l'Institut Valencià de Cultura, per la qual es convoquen subvencions destinades al foment d'activitats musicals per a 2026.",
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1096085,
+    "mrr": false,
+    "numeroConvocatoria": "894524",
+    "descripcion": "RESOLUCIÓN del director general del Institut Valencià de Cultura por la que se convocan subvenciones destinadas al fomento de actividades musicales para 2026.",
+    "descripcionLeng": "RESOLUCIÓ del director general de l'Institut Valencià de Cultura, per la qual es convoquen subvencions destinades al foment d'activitats musicals per a 2026.",
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1096063,
+    "mrr": false,
+    "numeroConvocatoria": "894502",
+    "descripcion": "UTILIZACIÓN RACIONAL DEL AGUA  Y LA MEJORA DE LA EFICIENCIA ENERGÉTICA EN REGADIOS",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-03-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1095935,
+    "mrr": false,
+    "numeroConvocatoria": "894374",
+    "descripcion": "AYUDAS A LAS ORGANIZACIONES PROFESIONALES AGRARIAS",
+    "descripcionLeng": "AJUDES A LES ORGANIZATCIONS PROFESIONALS AGRARIES",
+    "fechaRecepcion": "2026-03-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1095930,
+    "mrr": false,
+    "numeroConvocatoria": "894369",
+    "descripcion": "Resolución de 17 de marzo de 2026, de la Dirección General de Deporte, por la que se convocan becas académico-deportivas para deportistas de élite de la Comunitat Valenciana para el año 2026.",
+    "descripcionLeng": "Resolució de 17 de març de 2026, de la Direcció General d’Esport, per la qual es convoquen beques academicoesportives per a esportistes d’elit de la Comunitat Valenciana per a l’any 2026.",
+    "fechaRecepcion": "2026-03-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE RELACIONES INSTITUCIONALES Y TRANSPARENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1095146,
+    "mrr": false,
+    "numeroConvocatoria": "893585",
+    "descripcion": "RESOLUCIÓN de la Conselleria de Educación, Cultura y Universidades, por la que se convoca la concesión de subvenciones destinadas a financiar la reforma y modernización de instalaciones y equipamiento de espacios escénicos existentes.",
+    "descripcionLeng": "RESOLUCIÓ de la Conselleria d’Educació, Cultura i Universitats, per la qual es convoca la concessió de subvencions destinades a finançar la reforma i modernització d’instal·lacions i equipament d’espais escènics existents.",
+    "fechaRecepcion": "2026-03-17",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1094814,
+    "mrr": false,
+    "numeroConvocatoria": "893253",
+    "descripcion": "RESOLUCIÓN de 12 de marzo de 2026, de la presidenta del IVACE, por la que se convocan ayudas dirigidas a centros tecnológicos de la Comunitat Valenciana para el desarrollo de proyectos de I+D en ámbitos tecnológicos STEP",
+    "descripcionLeng": "RESOLUCIÓ de 12 de març de 2026, de la presidenta de l'IVACE, per la qual es convoquen ajudes dirigides a centres tecnològics de la Comunitat Valenciana per al desenvolupament de projectes d’R+D en ambits tecnològics STEP",
+    "fechaRecepcion": "2026-03-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1094612,
+    "mrr": false,
+    "numeroConvocatoria": "893051",
+    "descripcion": "S0339 PREMIO LITERARIO DE NARRATIVA DE MUJERES",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-03-13",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1094365,
+    "mrr": false,
+    "numeroConvocatoria": "892804",
+    "descripcion": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0128 FINANCIACIÓN DE LA RETRIBUCIÓN DE LA PERSONA TITULAR DE LA COORDINACIÓN GENERAL DE LA PRUEBA DE ACCESO A LA UNIVERSIDA",
+    "descripcionLeng": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0128 FINANCIACIÓN DE LA RETRIBUCIÓN DE LA PERSONA TITULAR DE LA COORDINACIÓN GENERAL DE LA PRUEBA DE ACCESO A LA UNIVERSIDA",
+    "fechaRecepcion": "2026-03-12",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1094097,
+    "mrr": false,
+    "numeroConvocatoria": "892536",
+    "descripcion": "Resolución 10.03.2026 del director general de Labora-Serv Valenciano de Empleo y Formación, por la que se aprueba la convocatoria del programa mixto de empleo formación Talleres de Empleo, con cargo al ejercicio presupuestario 2026, en aplicación de la O",
+    "descripcionLeng": "RESOLUCIÓ de 10.03.2026  del director general de Labora - Serv Valencià d’Ocupació i Formació, per la qual s’aprova la convocatòria del programa mixt d’ocupació formació “Tallers d’ocupació”, amb càrrec a l’exercici pressupostari 2026, en aplicació de l’O",
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1094062,
+    "mrr": false,
+    "numeroConvocatoria": "892501",
+    "descripcion": "Resolución 10.03.2026 director general de Labora - Servicio Valenciano de Empleo y Formación, por la que se aprueba la convocatoria de Escuelas Taller, programa mixto de empleo formación, con cargo al ejercicio presupuestario 2026, en aplicación de la O",
+    "descripcionLeng": "Resolució 10.03.2026 director general de Labora Servici Valencià d’Ocupació i Formació per la qual s’aprova la convocatòria d’Escoles Taller, programa mixt d’ocupació-formació, amb càrrec a l’exercici pressupostari 2026, en aplicació de l’",
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093986,
+    "mrr": false,
+    "numeroConvocatoria": "892425",
+    "descripcion": "RESOLUCIÓN de la Conselleria de Servicios Sociales, Familia e Infancia, por la que se convocan para el ejercicio 2026 las subvenciones en materia de envejecimiento activo y lucha contra la soledad no deseada.",
+    "descripcionLeng": "RESOLUCIÓ de la Conselleria de Servicis Socials, Família i Infància, per la qual es convoquen per a l’exercici 2026 les subvencions en matèria d’envelliment actiu i lluita contra la soledat no desitjada.",
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093958,
+    "mrr": false,
+    "numeroConvocatoria": "892397",
+    "descripcion": "SUBVENCIONES DESTINADAS A LA ADMINISTRACIÓN LOCAL DE LA COMUNITAT VALENCIANA PARA POTENCIAR PROYECTOS DE INNOVACIÓN DENTRO PLAN IMPULSO TERRITORIOS INNOVADORES PARA 2025",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE INNOVACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093937,
+    "mrr": false,
+    "numeroConvocatoria": "892376",
+    "descripcion": "RESOLUCIÓN, de la Conselleria de Servicios Sociales, Familia e Infancia, por la que se convocan para el ejercicio 2026 las subvenciones en materia programas tercera edad y asociacionismo y en programas de actuaciones en enfermedades neurodegenerativas que",
+    "descripcionLeng": "RESOLUCIÓ, de la Conselleria de Servicis Socials, Família i Infància, per la qual es convoquen per a l’exercici 2026 les subvencions en matèria de programes de la tercera edat i associacionisme i en programes d’actuacions en malalties neurodegeneratives q",
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093932,
+    "mrr": false,
+    "numeroConvocatoria": "892371",
+    "descripcion": "RESOLUCIÓN, de la Conselleria de Servicios Sociales, Familia e Infancia, por la que se convocan para el ejercicio 2026 las subvenciones en materia programas tercera edad y asociacionismo y en programas de actuaciones en enfermedades neurodegenerativas que",
+    "descripcionLeng": "RESOLUCIÓ, de la Conselleria de Servicis Socials, Família i Infància, per la qual es convoquen per a l’exercici 2026 les subvencions en matèria de programes de la tercera edat i associacionisme i en programes d’actuacions en malalties neurodegeneratives q",
+    "fechaRecepcion": "2026-03-11",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE  FAMILIA Y SERVICIOS SOCIALES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093738,
+    "mrr": false,
+    "numeroConvocatoria": "892177",
+    "descripcion": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0129 COMPENSACIÓN GASTOS DANA 2025",
+    "descripcionLeng": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0129 COMPENSACIÓN GASTOS DANA 2025",
+    "fechaRecepcion": "2026-03-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093722,
+    "mrr": false,
+    "numeroConvocatoria": "892161",
+    "descripcion": "LÍNEAS S0254, S0261, S0262, S0368 Subvenciones Atención y prevención de las drogodependencias y otros trastornos adictivos ejercicio 2026",
+    "descripcionLeng": "LÍNIES S0254, S0261, S0262, S0368 Subvencions  Atenció i prevenció de les drogodependències i altres transtorns addictius ejercici 2026",
+    "fechaRecepcion": "2026-03-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093437,
+    "mrr": false,
+    "numeroConvocatoria": "891876",
+    "descripcion": "RESOLUCIÓN de 6 de marzo de 2026, de la consellera de Industria, Turismo, Innovación y Comercio, por la que se convocan los premios de la Generalitat de la fase autonómica del concurso escolar 2025-2026 Consumópolis21",
+    "descripcionLeng": "RESOLUCIÓ de 6 de març de 2026, de la consellera d'Indústria, Turisme, Innovació i Comerç, per la qual es convoquen els premis de la Generalitat de la fase autonòmica del concurs escolar 2025-2026 Consumópolis21",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093352,
+    "mrr": false,
+    "numeroConvocatoria": "891791",
+    "descripcion": "Promoción de las energías renovables en la Comunitat Valenciana (CECV)",
+    "descripcionLeng": "Promoció de les energies renovables en la Comunitat Valenciana (CECV)",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093351,
+    "mrr": false,
+    "numeroConvocatoria": "891790",
+    "descripcion": "Promoción de las energías renovables en la Comunitat (AVAESEN)",
+    "descripcionLeng": "Promoció de les energies renovables en la Comunitat Valenciana (AVAESEN)",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093349,
+    "mrr": false,
+    "numeroConvocatoria": "891788",
+    "descripcion": "Colaboración con las cámaras de comercio, energía nuclear (Consejo de Cámaras de Comercio de la CV)",
+    "descripcionLeng": "Col·laboració amb les cambres de comerç, energia nuclear (Consell de Cambres de Comerç de la CV)",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093348,
+    "mrr": false,
+    "numeroConvocatoria": "891787",
+    "descripcion": "Colaboración con las cámaras de comercio, energías renovables (Consejo de Cámaras de Comercio de la CV)",
+    "descripcionLeng": "Col·laboració amb les cambres de comerç, energies renovables (Consell de Cambres de Comerç de la CV)",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1093345,
+    "mrr": false,
+    "numeroConvocatoria": "891784",
+    "descripcion": "Coordinación Estrategia del Hidrógeno Renovable de la CV 2030 y colaboración al impulso del plan director energético",
+    "descripcionLeng": "Coordinació Estratègia de l'Hidrogen Renovable de la CV 2030 i col·laboració a l'impuls del pla director energètic",
+    "fechaRecepcion": "2026-03-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092972,
+    "mrr": false,
+    "numeroConvocatoria": "891411",
+    "descripcion": "RESOLUCIÓN del director general del Institut Valencià de la Joventut, por la que se convocan en el ejercicio 2026 las ayudas a entidades juveniles, con ámbito de actuación en la Comunitat Valenciana, para la ejecución de programas de juventud.",
+    "descripcionLeng": "RESOLUCIÓ del director general de l'Institut Valencià de la Joventut, per la qual es convoquen en l'exercici 2026 les ajudes a entitats juvenils, amb àmbit d'actuació en la Comunitat Valenciana, per a l'execució de programes de joventut.",
+    "fechaRecepcion": "2026-03-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE LA JOVENTUT (IVAJ)",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092926,
+    "mrr": false,
+    "numeroConvocatoria": "891365",
+    "descripcion": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0117 PROGRAMA MARIA GOYRI INCORPORACIÓN TALENTO DOCENTE E INVESTIGADOR FINANCIADO POR LA GVA",
+    "descripcionLeng": "RESOLUCIÓN DEL DIRECTOR GENERAL DE UNIVERSIDADES POR LA QUE SE APRUEBA UNA TRANSFERENCIA CORRESPONDIENTE A LA LÍNEA PRESUPUESTARIA T0117 PROGRAMA MARIA GOYRI INCORPORACIÓN TALENTO DOCENTE E INVESTIGADOR FINANCIADO POR LA GVA",
+    "fechaRecepcion": "2026-03-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092792,
+    "mrr": false,
+    "numeroConvocatoria": "891231",
+    "descripcion": "Ayudas a entidades locales para obras de acondicionamiento de caminos rurales",
+    "descripcionLeng": "Ajudes a entitats locals per a obres de condicionament de camins rurals",
+    "fechaRecepcion": "2026-03-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092461,
+    "mrr": false,
+    "numeroConvocatoria": "890900",
+    "descripcion": "RESOLUCIÓN de 4 de marzo de 2026, del Director general del Institut Valencià de Cultura, por la que se convocan los premios de la 41ª edición del Festival Internacional de Cine de València - Cinema Jove 2026.",
+    "descripcionLeng": "RESOLUCIÓ de 4 de març, del director general de l’Institut Valencià de Cultura, per la qual es convoquen els premis de la 41a edició del Festival Internacional de Cine de València - Cinema Jove 2026.",
+    "fechaRecepcion": "2026-03-04",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1092451,
+    "mrr": false,
+    "numeroConvocatoria": "890890",
+    "descripcion": "Concesión de subvención nominativa al Consejo de Cámaras Oficiales de Comercio, Industria, Servicios y Navegación de la Comunitat Valenciana para desarrollo de actividades orientadas a impulsar la internacionalización de las empresas de la Comunitat 2025",
+    "descripcionLeng": "Concessió de subvenció nominativa al Consell de cambres oficials de Comerç, Indústria, Serveis i Navegació de la Comunitat Valenciana desenvolupament d'activitats orientades a impulsar la internacionalització de les empreses de la Comunitat 2025",
+    "fechaRecepcion": "2026-03-04",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1092201,
+    "mrr": false,
+    "numeroConvocatoria": "890640",
+    "descripcion": "CONVENIO GVA-AYUNTAMIENTO DE ELCHE PARA ACTUACIÓN SOBRE EL CONVENTO DE LAS CLARISAS Y LA BASILICA DE SANTA MARIA",
+    "descripcionLeng": "CONVENI GVA-AJUNTAMENT D'ELX PER A ACTUACIÓ SOBRE EL CONVENT DE LES CLARISSES I LA BASÍLICA DE SANTA MARIA",
+    "fechaRecepcion": "2026-03-03",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092196,
+    "mrr": false,
+    "numeroConvocatoria": "890635",
+    "descripcion": "CONVENIO DE COLABORACIÓN GENERALITAT - UNIVERSIDAD POLITÉCNICA DE VALÈNCIA PARA FINANCIACIÓN DEL MASTER UNIVERSITARIO EN CONSERVACIÓN DEL PATRIMONIO",
+    "descripcionLeng": "CONVENI COL·LABORACIÓ GENERALITAT - UNIVERSITAT POLITÈCNICA DE VALÈNCIA PER FINANÇAMENT DEL MASTER UNIVERSITARI EN CONSERVACIO DEL PATRIMONIO",
+    "fechaRecepcion": "2026-03-03",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092195,
+    "mrr": false,
+    "numeroConvocatoria": "890634",
+    "descripcion": "RESOLUCIÓN DE LA SECRETARIA AUTONÓMICA DE CULTURA Y DEPORTE  POR LA QUE SE CONCEDE SUBVENCIÓN AL AYUNTAMIENTO DE ALICANTE  PARA REALIZACIÓN ACTIVIDADES VINCULADAS AL MACA",
+    "descripcionLeng": "RESOLUCIÓN DE LA SECRETARIA AUTONÓMICA DE CULTURA Y DEPORTE  POR LA QUE SE CONCEDE SUBVENCIÓN AL AYUNTAMIENTO DE ALICANTE  PARA REALIZACIÓN ACTIVIDADES VINCULADAS AL MACA",
+    "fechaRecepcion": "2026-03-03",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092021,
+    "mrr": false,
+    "numeroConvocatoria": "890460",
+    "descripcion": "SUBVENCION PARA LA INTEGRACION COOPERATIVA EN LA C.V.",
+    "descripcionLeng": "SUBVENCIO PER A LA INTEGRACIO CCOP AGROALIMENTARIA EN LA COMUNITAT VALENCIANA",
+    "fechaRecepcion": "2026-03-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1092013,
+    "mrr": false,
+    "numeroConvocatoria": "890452",
+    "descripcion": "Cuota anual ERRIN Red de regiones europeas para la investigación e innovación",
+    "descripcionLeng": "Quota anual ERRIN xarxa de regions europees per a la investigació i innovació",
+    "fechaRecepcion": "2026-03-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE REPRESENTACIÓN ANTE LA UNIÓN EUROPEA Y LAS COMUNIDADES AUTÓNOMAS",
+    "codigoInvente": null
+  },
+  {
+    "id": 1091791,
+    "mrr": false,
+    "numeroConvocatoria": "890230",
+    "descripcion": "CONVENIO PRODUCTO GASTRONOMICO GASTERRA UA",
+    "descripcionLeng": "CONVENI PRODUCTE GASTRONOMIC GASTERRA UA",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091785,
+    "mrr": false,
+    "numeroConvocatoria": "890224",
+    "descripcion": "2026 LÍNEA DE FINANCIACIÓN PRÉSTAMOS BONIFICADOS IVF PYME INVERSIÓN 2026. REGLAMENTO UE 651/2014",
+    "descripcionLeng": "2026 LÍNIA DE FINANÇAMENT PRÉSTECS BONIFICATS IVF PIME INVERSIÓ 2026. REGLAMENT UE 651/2014",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1091783,
+    "mrr": false,
+    "numeroConvocatoria": "890222",
+    "descripcion": "RESOLUCIÓN DE LA PRESIDENTA DE TURISMO COMUNIDAD VALENCIANA POR LA CUAL SE REGULA Y CONCEDE UNA SUBVENCIÓN DIRECTA A LA FUNDACIÓN *ASINDOWN DE LA COMUNIDAD VALENCIANA, PARA EL FOMENTO, DURANTE El AÑO 2024, DE LA FORMACIÓN DE PERSONAS CON SÍNDROME DE *DOWN",
+    "descripcionLeng": "RESOLUCIÓ DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA PER LA QUAL ES REGULA I CONCEDEIX UNA SUBVENCIÓ DIRECTA A LA FUNDACIÓ ASINDOWN DE LA COMUNITAT VALENCIANA, PER AL FOMENT, DURANT L’ANY 2024, DE LA FORMACIÓ DE PERSONES AMB SÍNDROME DE DOWN PER A L",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091748,
+    "mrr": false,
+    "numeroConvocatoria": "890187",
+    "descripcion": "RESOLUCIÓN DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA POR LA QUE SE REGULA Y CONCEDE UNA SUBVENCIÓN DIRECTA AL INSTITUTO TECNOLÓGICO HOTELETO (ITH),– PARA LA MEJORA DE LA TECNOLOGÍA APLICADA AL SECTOR HOTELERO DE LA COMUNITAT VALENCIANA DURANTE EL A",
+    "descripcionLeng": "RESOLUCIÓ DE LA PRESIDENTA DE *TURISME COMUNITAT VALENCIANA PER LA QUAL ES REGULA I CONCEDIX UNA SUBVENCIÓ DIRECTA A L'INSTITUT TECNOLÒGIC *HOTELETO (*ITH),– PER A LA MILLORA DE LA TECNOLOGIA APLICADA AL SECTOR HOTELER DE LA COMUNITAT VALENCIANA DURANT L'",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091739,
+    "mrr": false,
+    "numeroConvocatoria": "890178",
+    "descripcion": "2026 LÍNEA DE FINANCIACIÓN PRÉSTAMOS BONIFICADOS IVF PARA LA RECUPERACIÓN Y REACTIVACIÓN DE LAS ZONAS AFECTADAS POR LA DANA DE OCTUBRE DE 2024. MINIMIS",
+    "descripcionLeng": "2026 LÍNIA DE FINANÇAMENT PRÉSTECS BONIFICATS IVF PER A LA RECUPERACIÓ I REACTIVACIÓ DE LES ZONES AFECTADES PER LA DANA D’OCTUBRE DE 2024. MINIMIS",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1091727,
+    "mrr": false,
+    "numeroConvocatoria": "890166",
+    "descripcion": "RESOLUCIÓN DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA POR LA QUE SE REGULA Y CONCEDE UNA SUBVENCIÓN DIRECTA A LA FUNDACIÓN ASINDOWN DE LA COMUNITAT VALENCIANA, PARA EL FOMENTO, DURANTE EL AÑO 2025, DE LA FORMACIÓN PERSONAS CON SÍNDROME DE DOWN",
+    "descripcionLeng": "RESOLUCIÓ DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA PER LA QUAL ES REGULA I CONCEDEIX UNA SUBVENCIÓ DIRECTA A LA FUNDACIÓ ASINDOWN DE LA COMUNITAT VALENCIANA, PER AL FOMENT, DURANT L’ANY 2025, DE LA FORMACIÓ DE PERSONES AMB SÍNDROME DE DOWN PER A L",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091706,
+    "mrr": false,
+    "numeroConvocatoria": "890145",
+    "descripcion": "RESOLUCION DE LA PRESIDENTA DE TURISME COMUNITAT VALENCIANA POR LA QUE SE REGULA Y CONCEDE UNA SUBVENCIÓN DIRECTA A LA AGRUPACIÓN INNOVADORA DE LOS DESTINOS TURÍSTICOS INTELIGENTES DE LA COMUNITAT VALENCIANA (ADESTIC), PARA EL IMPULSO DE LA INNOVACIÓN DEL",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091684,
+    "mrr": false,
+    "numeroConvocatoria": "890123",
+    "descripcion": "Convenio de colaboración entre Turisme CV y la Universidad de Alicante para la realización de un curso de formación específica para personal de pisos en hoteles",
+    "descripcionLeng": "Conveni de col.laboració entre Turisme CV i la Universitat d´Alacant per a la realització d´un curs de formació específica per a personal de pisos en hotels",
+    "fechaRecepcion": "2026-02-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1091650,
+    "mrr": false,
+    "numeroConvocatoria": "890089",
+    "descripcion": "2026 PRÉSTAMOS BONIFICADOS IVF AGRO ANTICRISIS 2026 MINIMIS",
+    "descripcionLeng": "2026 PRÉSTECS BONIFICATS IVF AGRO ANTICRISI 2026 MINIMIS",
+    "fechaRecepcion": "2026-02-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1091380,
+    "mrr": false,
+    "numeroConvocatoria": "889819",
+    "descripcion": "Resolución de 4 de diciembre de 2025, por la que se instrumenta la dotación de crédito a la Corporación Audiovisual de la CV, SA para financiar los gastos para la promoción y divulgación de equipos y deportistas valencianos que necesitan un impulso.",
+    "descripcionLeng": "Resolució de 4 de desembre de 2025, per la qual s'instrumenta la dotació de crèdit a la Corporació Audiovisual de la CV, SA per a finançar els gastos per a la promoció i divulgació d'equips i esportistes valencians que necessiten un impuls.",
+    "fechaRecepcion": "2026-02-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE RELACIONES INSTITUCIONALES Y TRANSPARENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1091138,
+    "mrr": false,
+    "numeroConvocatoria": "889577",
+    "descripcion": "2026 LÍNEA DE FINANCIACIÓN PRÉSTAMOS BONIFICADOS IVF PYME INVERSIÓN 2026. MINIMIS",
+    "descripcionLeng": "2026 LÍNIA DE FINANÇAMENT PRÉSTECS BONIFICATS IVF PIME INVERSIÓ 2026. MINIMIS",
+    "fechaRecepcion": "2026-02-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1091112,
+    "mrr": false,
+    "numeroConvocatoria": "889551",
+    "descripcion": "313J00 S0330 AYUDAS PARA PROYECTOS DE INVERSIÓN",
+    "descripcionLeng": "313J00 S0330 AJUDES PER A PROJECTES D'INVERSIÓ",
+    "fechaRecepcion": "2026-02-25",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SISTEMA SOCIOSANITARIO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1090807,
+    "mrr": false,
+    "numeroConvocatoria": "889246",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT, A TRAVÉS DE LA CONSELLERIA DE HACIENDA Y ECONOMÍA, Y EL COLEGIO OFICIAL DE INGENIERÍA INFORMÁTICA DE LA COMUNITAT VALENCIANA (COIICV), PARA LA DIVULGACIÓN TECNOLÓGICA Y LA PROMOCIÓN DEL TEJIDO PRODUCTIVO TIC.",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT, A través DE LA CONSELLERIA D'HISENDA I ECONOMIA, I EL COL·LEGI OFICIAL D'ENGINYERIA INFORMÀTICA DE LA COMUNITAT VALENCIANA (*COIICV), PER A LA DIVULGACIÓ TECNOLÒGICA I LA PROMOCIÓ DEL TEIXIT PRODUCTIU TIC.",
+    "fechaRecepcion": "2026-02-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE ECONOMIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1090806,
+    "mrr": false,
+    "numeroConvocatoria": "889245",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT, A TRAVÉS DE LA CONSELLERIA DE HACIENDA Y ECONOMÍA, Y LA ASOCIACIÓN VALENCIANA DE INGENIEROS TÉCNICOS DE TELECOMUNICACIÓN (AVITT) PARA LA DIVULGACIÓN TECNOLÓGICA Y LA PROMOCIÓN DEL TEJIDO PRODUCTIVO TIC.",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT, A través DE LA CONSELLERIA D'HISENDA  I ECONOMIA, I L'ASSOCIACIÓ VALENCIANA D'ENGINYERS TÈCNICS DE TELECOMUNICACIÓ (*AVITT) PER A LA DIVULGACIÓ TECNOLÒGICA I LA PROMOCIÓ DEL TEIXIT  PRODUCTIU TIC.",
+    "fechaRecepcion": "2026-02-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE ECONOMIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1090805,
+    "mrr": false,
+    "numeroConvocatoria": "889244",
+    "descripcion": "CONVENIO DE COLABORACIÓN ENTRE LA GENERALITAT, A TRAVÉS DE LA CONSELLERIA DE HACIENDA Y ECONOMÍA, Y LA ASOCIACIÓN VALENCIANA DE INGENIEROS DE TELECOMUNICACIÓN (AVIT) PARA LA DIVULGACIÓN TECNOLÓGICA Y LA PROMOCIÓN DEL TEJIDO PRODUCTIVO TIC.",
+    "descripcionLeng": "CONVENI DE COL·LABORACIÓ ENTRE LA GENERALITAT, A través DE LA CONSELLERIA D'HISENDA  I ECONOMIA, I L'ASSOCIACIÓ VALENCIANA D'ENGINYERS DE TELECOMUNICACIÓ (*AVIT) PER A LA DIVULGACIÓ TECNOLÒGICA I LA PROMOCIÓ DEL TEIXIT  PRODUCTIU TIC..",
+    "fechaRecepcion": "2026-02-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE ECONOMIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1090767,
+    "mrr": false,
+    "numeroConvocatoria": "889206",
+    "descripcion": "Concesión de subvención nominativa a la Universitat Politècnica de València para el desarrollo de acciones en la prioridad de la Estrategia de Especialización Inteligente de la Comunitat Valenciana (S3-CV) sobre gestión y uso eficiente del agua.",
+    "descripcionLeng": "Concessió de subvenció nominativa a la Universitat Politècnica de València per al desenvolupament d'accions en la prioritat de l'Estratègia d'Especialització Intel·ligent de la Comunitat Valenciana (S3-CV) sobre gestió i ús eficient de l'aigua.",
+    "fechaRecepcion": "2026-02-24",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090663,
+    "mrr": false,
+    "numeroConvocatoria": "889102",
+    "descripcion": "Concesión de subvención nominativa a la Cámara Oficial de Comercio, Industria, Servicios y Navegación de Castellón para la organización y preparación en 2025 del Congreso mundial de la calidad del azulejo y del pavimento cerámico Qualicer 2026",
+    "descripcionLeng": "Concessió de subvenció nominativa a la Cambra Oficial de Comerç, Indústria, Serveis i Navegació de Castelló per a l'organització i preparació en 2025 del Congrés mundial de la qualitat del taulell i del paviment ceràmic Qualicer 2026",
+    "fechaRecepcion": "2026-02-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090644,
+    "mrr": false,
+    "numeroConvocatoria": "889083",
+    "descripcion": "SUBVENCIONES NOMINATIVAS A LOS CENTROS EUROPEOS DE EMPRESAS E INNOVACIÓN DE LA COMUNITAT VALENCIANA, PARA APOYAR LA COORDINACIÓN DEL MAPA DEL EMPRENDIMIENTO VALENCIANO HACIA UN ECOSISTEMA INNOVADOR, , DIVERSIFICADO Y EFICIENTE",
+    "descripcionLeng": "SUBVENCIONS NOMINATIVES ALS CENTRES EUROPEUS D'EMPRESES I INNOVACIÓ DE LA COMUNITAT VALENCIANA, PER A DONAR SUPORT A LA COORDINACIÓ DEL MAPA DE L'EMPRENEDORIA VALENCIANA CAP A UN ECOSISTEMA INNOVADOR, DIVERSIFICAT I EFICIENT",
+    "fechaRecepcion": "2026-02-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090629,
+    "mrr": false,
+    "numeroConvocatoria": "889068",
+    "descripcion": "RESOLUCIÓN de 23 de febrero de 2026, del director general del Institut Valencià de Cultura, por la que se convocan subvenciones para la producción de obras audiovisuales en la Comunidad Valenciana, para las anualidades de 2026, 2027 y 2028",
+    "descripcionLeng": "RESOLUCIÓ de 23 de febrer de 2026, del director general de l’Institut Valencià de Cultura, per la qual es convoquen subvencions per a la producció d’obres audiovisuals en la Comunitat Valenciana, per a les anualitats de 2026, 2027 i 2028",
+    "fechaRecepcion": "2026-02-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1090526,
+    "mrr": false,
+    "numeroConvocatoria": "888965",
+    "descripcion": "Concesión directa de subvención del IVACE al Consejo de Cámaras Oficiales de Comercio, Industria, Servicios y Navegación de la Comunitat Valenciana, para impulsar la competitividad de las empresas de la Comunitat Valenciana 2025",
+    "descripcionLeng": "Concessió directa de subvenció de l'IVACE al Consell de Cambres Oficials de Comerç, Indústria, Serveis i Navegació de la Comunitat Valenciana, per a impulsar competitivitat de les empreses de la Comunitat Valenciana 2025",
+    "fechaRecepcion": "2026-02-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090473,
+    "mrr": false,
+    "numeroConvocatoria": "888912",
+    "descripcion": "Convocatoria de ayudas para apoyar actividades no económicas desarrolladas por asociaciones empresariales que impulsen la reindustrialización de la Comunitat Valenciana. INENTI 2026",
+    "descripcionLeng": "Convocatoria d'ajudes per a donar suport a activitats no econòmiques desenvolupades per associacions empresarials que impulsen la reindustrialització de la Comunitat Valenciana. INENTI 2026",
+    "fechaRecepcion": "2026-02-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1090294,
+    "mrr": false,
+    "numeroConvocatoria": "888733",
+    "descripcion": "RESOLUCIÓN del Director General del Institut Valencià de Cultura por la que se convocan subvenciones de carácter bienal destinadas a compañías profesionales de teatro, danza y circo para los ejercicios 2026 y 2027.",
+    "descripcionLeng": "RESOLUCIÓ del director general de l’Institut Valencià de Cultura, per la qual es convoquen subvencions de caràcter biennal destinades a companyies professionals de teatre, dansa i circ per als exercicis 2026 i 2027.",
+    "fechaRecepcion": "2026-02-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1090282,
+    "mrr": false,
+    "numeroConvocatoria": "888721",
+    "descripcion": "RESOLUCIÓN de 19 de noviembre de 2025, de la Presidencia, por la que se instrumenta la concesión de subvención nominativa a la Universitat de València para la realización de un estudio académico sobre el ecosistema de clústeres de la Comunitat Valenciana.",
+    "descripcionLeng": "RESOLUCIÓ de 19 de novembre de 2025, de la Presidència, per la qual s’instrumenta la concessió de subvenció nominativa a la Universitat de València per a la realització d’un estudi acadèmic sobre l’ecosistema de clústers de la Comunitat Valenciana.",
+    "fechaRecepcion": "2026-02-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090181,
+    "mrr": false,
+    "numeroConvocatoria": "888620",
+    "descripcion": "SUBVENCIONES NOMINATIVAS A LOS CENTROS TECNOLÓGICOS DE LA COMUNITAT VALENCIANA PARA APOYAR SU ACTIVIDAD EN MATERIA DE I+D INDEPENDIENTE, DIFUSIÓN DE RESULTADOS DE INVESTIGACIÓN Y TRANSFERENCIA DE CONOCIMIENTO Y TECNOLOGÍA A LAS EMPRESAS DE LA C. V.",
+    "descripcionLeng": "SUBVENCIONS NOMINATIVES ALS CENTRES TECNOLÒGICS DE LA COMUNITAT VALENCIANA PER A DONAR SUPORT A LA SEUA ACTIVITAT EN MATÈRIA D'R+D INDEPENDENT, DIFUSIÓ DE RESULTATS D'INVESTIGACIÓ I TRANSFERÈNCIA DE CONEIXEMENT I TECNOLOGIA A LES EMPRESES DE LA C. V.",
+    "fechaRecepcion": "2026-02-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1090133,
+    "mrr": false,
+    "numeroConvocatoria": "888572",
+    "descripcion": "RESOLUCIÓN de 19 de febrero de 2026 del director de la Agencia Valenciana de Fomento y Garantía Agraria, por la que se aprueba la convocatoria de ayudas a la reestructuración y reconversión de viñedo de la Comunitat Valenciana para operaciones que finali",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-02-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE FOMENTO Y GARANTÍA AGRARIA",
+    "codigoInvente": "INV00000152"
+  },
+  {
+    "id": 1089867,
+    "mrr": false,
+    "numeroConvocatoria": "888306",
+    "descripcion": "Resolución C. Justicia, Transp y P. concesión al CVCP subv. ( LÍNEA S0836) asistencia jurídica gratuita, acceso justicia, turno de oficio, funcionamiento col. profesionales, representación inicial y previa violencia sobre la mujer e Inversiones",
+    "descripcionLeng": "Resolució C. Justicia, Transp i P concessió al CVCP subv. ( LÍNEA S0836) assistència jurídica gratuïta, accés justicia, torn d' ofici, funcionament col. professionals, representació inicial i prèvia violencia sobre la dona i Inversions",
+    "fechaRecepcion": "2026-02-19",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1089843,
+    "mrr": false,
+    "numeroConvocatoria": "888282",
+    "descripcion": "Resolución C. Justicia,Transp y Part. concesión al CVCP subv. ( LÍNEA S0237) asistencia jurídica gratuita, acceso justicia, turno de oficio, funcionamiento col. profesionales, representación inicial y previa violencia sobre la mujer e Inversiones",
+    "descripcionLeng": "Resolució C. Justicia, Tranp i Part concessió al CVCP subv. ( LÍNEA S0237) assistència jurídica gratuïta, accés justicia, torn d' ofici, funcionament col. professionals, representació inicial i prèvia violencia sobre la dona i Inversions",
+    "fechaRecepcion": "2026-02-19",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1089826,
+    "mrr": false,
+    "numeroConvocatoria": "888265",
+    "descripcion": "Resolución C. Justicia, Transp. y P concesión al CVCA subv. ( LÍNEA S0835) asistencia jurídica gratuita, acceso justicia, turno de oficio, asist. a persona detenida o presa, derecho de defensa y funcionamiento de los SOJs, act. humanitarias e Inversiones",
+    "descripcionLeng": "Resolució C. Justícia, Transp i P concessió al CVCA subv. ( LÍNIA S0835) assistència jurídica gratuïta, accés justícia, torn d'ofici, asist. a persona detinguda o presa, dret de defensa i funcionament dels SOJ, act. humanitàries i inversons",
+    "fechaRecepcion": "2026-02-19",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1089817,
+    "mrr": false,
+    "numeroConvocatoria": "888256",
+    "descripcion": "Resolución C. Justicia, Transparencia y Part. concesión al CVCA subv. (LÍNEA S0236) asistencia jurídica gratuita, acceso justicia, turno de oficio, asist. a persona detenida o presa, d. de defensa y funcionamiento de los SOJ, act. humanitarias e Invers",
+    "descripcionLeng": "Resolució C. Justícia, Transparència i Part. concessió al CVCA subv.(LÍNIA S0236) assistència jurídica gratuïta, accés justícia,  torn d'ofici, asist. a persona detinguda o presa, dret de defensa i funcionament dels SOJ, act. humanitàries i inversions",
+    "fechaRecepcion": "2026-02-19",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE JUSTICIA Y AUTOGOBIERNO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1089810,
+    "mrr": false,
+    "numeroConvocatoria": "888249",
+    "descripcion": "2026 CONVOCATORIA DE LA LÍNEA DE FINANCIACIÓN PRÉSTAMOS IVF ENTIDADES SOCIALES 2026",
+    "descripcionLeng": "2026 CONVOCATÒRIA DE LA LÍNIA DE FINANÇAMENT PRÉSTECS IVF ENTITATS SOCIALS 2026",
+    "fechaRecepcion": "2026-02-19",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE FINANCES",
+    "codigoInvente": "INV00003756"
+  },
+  {
+    "id": 1089579,
+    "mrr": false,
+    "numeroConvocatoria": "888018",
+    "descripcion": "RESOLUCIÓN de la Conselleria de Sanidad, por la que se convocan subvenciones destinadas a financiar acciones y programas de actuación para la atención y cuidado de las personas afectas de Parkinson y de sus familias, en la Comunitat Valenciana, para 2026",
+    "descripcionLeng": "RESOLUCIÓ de la Conselleria de Sanitat, per la qual es convoquen subvencions destinades a finançar accions i programes d’actuació per a l’atenció i cura de les persones afectes de pàrkinson i de les seues famílies, en la Comunitat Valenciana, per a 2026",
+    "fechaRecepcion": "2026-02-18",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1089347,
+    "mrr": false,
+    "numeroConvocatoria": "887786",
+    "descripcion": "RESOLUCIÓN de la DG de Deporte, por la que se convocan, para el año 2026, subvenciones destinadas a favorecer la conciliación deportiva y familiar y la formación y actualización de mujeres deportistas de la Comunitat Valenciana",
+    "descripcionLeng": "RESOLUCIÓ de la DG d'Esport, per la qual es convoquen, per a l’any 2026, subvencions destinades a afavorir la conciliació esportiva i familiar i la formació i actualització de dones esportistes de la Comunitat Valenciana",
+    "fechaRecepcion": "2026-02-17",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE RELACIONES INSTITUCIONALES Y TRANSPARENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1088905,
+    "mrr": false,
+    "numeroConvocatoria": "887344",
+    "descripcion": "RESOLUCIÓN de la dirección general del Institut Valencià de Cultura por la que se convocan subvenciones destinadas a la adquisición de instrumentos musicales, durante los meses de diciembre de 2025 a noviembre de 2026",
+    "descripcionLeng": "RESOLUCIÓ de la direcció general de l’Institut Valencià de Cultura per la qual es convoquen subvencions destinades a l’adquisició d’instruments musicals durant els mesos de desembre de 2025 a novembre de 2026",
+    "fechaRecepcion": "2026-02-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1087741,
+    "mrr": false,
+    "numeroConvocatoria": "886180",
+    "descripcion": "RESOLUCIÓN de 9 de febrero de 2026, de la Vicepresidencia Segunda y Conselleria de Presidencia, por la que se convocan las subvenciones destinadas a la promoción del uso del valenciano en el ámbito festivo: libros de las Fallas, libros de la Magdalena, li",
+    "descripcionLeng": "RESOLUCIÓ de 9 de febrer de 2026, de la Vicepresidència Segona i Conselleria de Presidència, per la qual es convoquen les subvencions destinades a la promoció de l'ús del valencià en l'àmbit festiu: llibres de les Falles, llibres de la Magdalena, llibres",
+    "fechaRecepcion": "2026-02-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1087726,
+    "mrr": false,
+    "numeroConvocatoria": "886165",
+    "descripcion": "Ayudas PYMES industriales 2026: sector automoción, espacial, aeronáutica y semiconduc, biotec,, prod.audiovisual,prod.videojuegos, cuero y calzado,cerámica, vidrio y materiales construcción no metálicos, entre otros.",
+    "descripcionLeng": "Ajudes PIMES industrials 2026: sector automoció, espacial, aeronàutica i semiconduc, biotec,prod.audiovisual,prod.videojocs, cuir i calçat,ceràmica, vidre i materials construcció no metàl·lics, entre altres.",
+    "fechaRecepcion": "2026-02-10",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARIA AUTONÓMICA DE INDUSTRIA, COMERCIO Y CONSUMO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1087255,
+    "mrr": false,
+    "numeroConvocatoria": "885694",
+    "descripcion": "Resolución de 5 de febrero de 2026, de la Presidencia del IVACE, por la que se convoca la concesión de subvenciones a empresas para proyectos de I+D para el ejercicio 2026, con financiación de la U. E. a través del FEDER.",
+    "descripcionLeng": "Resolució de 5 de febrer 2026, de la Presidència de l’IVACE, per la qual es convoca la concessió de subvencions a empreses per a projectes d’R+D exercici 2026, amb finançamentde la U. E. a través FEDER.",
+    "fechaRecepcion": "2026-02-06",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1086519,
+    "mrr": false,
+    "numeroConvocatoria": "884958",
+    "descripcion": "Resolución 3 de febrero de 2026, de la Conselleria de Educación, Cultura y Universidades., por la que se convocan becas para la realización de estudios universitarios -exención de tasas-, durante el curso académico 2025-2026, universidades SUV.",
+    "descripcionLeng": "Resolució de 3 de febrer de 2026, de la Conselleria d'Educació, Cultura i Universitats, per la qual es convoquen beques per a la realització d'estudis universitaris –exempció de taxes– durant el curs acadèmic 2025-2026 universitats SUV.",
+    "fechaRecepcion": "2026-02-04",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1086447,
+    "mrr": false,
+    "numeroConvocatoria": "884886",
+    "descripcion": "RESOLUCIÓN de 2 de febrero de 2026, de la Presidencia, por la que se convocan ayudas a la contratación de jóvenes para la internacionalización de las pymes de la Comunitat Valenciana, con financiación del Programa Fondo Social Europeo Plus, ejercicio 2026",
+    "descripcionLeng": "RESOLUCIÓ de 2 de febrer de 2026, de la Presidència, per la qual es convoquen ajudes a la contractació de jóvens per a la internacionalització de les pimes de la Comunitat Valenciana, amb finançament del Programa Fons Social Europeu, exercici 2026",
+    "fechaRecepcion": "2026-02-03",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUTO VALENCIANO DE COMPETITIVIDAD EMPRESARIAL (IVACE)",
+    "codigoInvente": "INV00003755"
+  },
+  {
+    "id": 1085202,
+    "mrr": false,
+    "numeroConvocatoria": "883641",
+    "descripcion": "Resolución de 27 de enero de 2026 del director de la Agencia Valenciana de Fomento y Garantía Agraria mediante la que se establece la convocatoria correspondiente al año 2026 para concesión y solicitud de pago anual de las ayudas incluidas en la solicitud",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-01-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE FOMENTO Y GARANTÍA AGRARIA",
+    "codigoInvente": "INV00000152"
+  },
+  {
+    "id": 1085162,
+    "mrr": false,
+    "numeroConvocatoria": "883601",
+    "descripcion": "RESOLUCIÓN SECRETARIA AUTONÓMICA DE UNIVERSIDADES CONSELLERIA DE EDUCACIÓN, C., UNIV. Y EMPLEO QUE REGULA Y CONCEDE SUBV. A UNIV. PÚBLICAS DE LA COMUNITAT VALENCIANA PARA EL FOMENTO DE CONGRESOS Y ENCUENTROS ESTUDIANTADO INIVERSITARIO EJERCICIO 2025",
+    "descripcionLeng": "RESOLUCIÓN SECRETARIA AUTONÓMICA DE UNIVERSIDADES CONSELLERIA DE EDUCACIÓN, C., UNIV. Y EMPLEO QUE REGULA Y CONCEDE SUBV. A UNIV. PÚBLICAS DE LA COMUNITAT VALENCIANA PARA EL FOMENTO DE CONGRESOS Y ENCUENTROS ESTUDIANTADO INIVERSITARIO EJERCICIO 2025",
+    "fechaRecepcion": "2026-01-27",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1084923,
+    "mrr": false,
+    "numeroConvocatoria": "883362",
+    "descripcion": "CONVENIO CON EL AYUNTAMIENTO DE CULLERA PARA LA REALIZACIÓN DE ACCIONES DE MARKETING TURÍSTICO Y PROMOCIÓN DEL MUNICIPIO DE CULLERA 2025",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-01-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1084905,
+    "mrr": false,
+    "numeroConvocatoria": "883344",
+    "descripcion": "Convenio con el Ayuntamiento de Cocentaina para la realización de acciones de promoción del producto turístico del municipio 2025",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-01-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1084898,
+    "mrr": false,
+    "numeroConvocatoria": "883337",
+    "descripcion": "RESOLUCIÓN A FAVOR DE LA ASOCIACIÓN SAN JORGE PARA LA REALIZACIÓN DE ACTUACIONES DE MARKETING COLABORATIVO PARA LA PROMOCIÓN DEL PRODUCTO TURÍSTICO \"FIESTAS DE RELEVANTE INTERÉS TURISTICO\" DURANTE 2025",
+    "descripcionLeng": null,
+    "fechaRecepcion": "2026-01-26",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "TURISME COMUNITAT VALENCIANA",
+    "codigoInvente": "INV00005276"
+  },
+  {
+    "id": 1084665,
+    "mrr": false,
+    "numeroConvocatoria": "883104",
+    "descripcion": "Resolución 19/12/25 del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convocan para el ejercicio 2026 las subvenciones para fomentar la contratación temporal de personas con discapacidad severa, así como el tránsito",
+    "descripcionLeng": "RESOLUCIÓ 19/12/25 del director general de LABORA Servici Valencià d’Ocupació i Formació per la qual es convoquen per a l’exercici 2026 les subvencions per a fomentar la contractació temporal de persones amb discapacitat severa, així com el trànsit",
+    "fechaRecepcion": "2026-01-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1084661,
+    "mrr": false,
+    "numeroConvocatoria": "883100",
+    "descripcion": "RESOLUCIÓN de 19 de diciembre de 2025, del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convoca para el ejercicio 2026 subvenciones para fomentar la contratación indefinida de personas desempleadas de atención priori",
+    "descripcionLeng": "RESOLUCIÓ de 19 de desembre de 2025, del director general de LABORA Servici Valencià d’Ocupació i Formació,es convoquen per a l’exercici 2026 subvencions per a fomentar la contractació indefinida de persones desocupades d’atenció prioritària",
+    "fechaRecepcion": "2026-01-23",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1084331,
+    "mrr": false,
+    "numeroConvocatoria": "882770",
+    "descripcion": "RESOLUCIÓN de 30 de diciembre de 2025, del director general de LABORA Servicio Valenciano de Empleo y Formación, por la que se convoca para el ejercicio 2026 el Programa de fomento de la contratación indefinida de personas jóvenes cualificadas",
+    "descripcionLeng": "RESOLUCIÓ de 30 de desembre de 2025, del director general de LABORA Servici Valencià d’Ocupació i Formació, per la qual es convoca per a  l’exercici 2026 el Programa de foment de la contratació indefinifida de persones jóvens qualificades",
+    "fechaRecepcion": "2026-01-21",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "DIRECCIÓN GENERAL DE EMPLEO Y FORMACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083932,
+    "mrr": false,
+    "numeroConvocatoria": "882371",
+    "descripcion": "Resolución de la Vicepresidencia Segunda y Conselleria de Presidencia de la Generalitat, por la que se convocan ayudas destinadas a promover la protección, el fomento y el desarrollo del patrimonio y la dinamización cultural, y la adecuación y la renovaci",
+    "descripcionLeng": "Resolució de la Vicepresidència Segona i Conselleria de Presidència de la Generalitat, per la qual es convoquen ajudes destinades a promoure la protecció, el foment i el desenvolupament del patrimoni i la dinamització cultural, i l'adequació i la renovaci",
+    "fechaRecepcion": "2026-01-20",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE PRESIDENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083648,
+    "mrr": false,
+    "numeroConvocatoria": "882087",
+    "descripcion": "Adenda al Convenio Ministerio CIU, Conselleria de Edu, Cultura, Univ. y Empleo de la GV y las univ. públicas de C. Valenciana para implementación Programa Incorporación Talento Docente e Investigador a Univ. P. Españolas, según C.IV L.O. 2/2003 S. Univer",
+    "descripcionLeng": "Adenda al Convenio Ministerio CIU, Conselleria de Edu, Cultura, Univ. y Empleo de la GV y las univ. públicas de C. Valenciana para implementación Programa Incorporación Talento Docente e Investigador a Univ. P. Españolas, según C.IV L.O. 2/2003 S. Univer",
+    "fechaRecepcion": "2026-01-16",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083336,
+    "mrr": false,
+    "numeroConvocatoria": "881775",
+    "descripcion": "RESOLUCIÓN  por  a que se dispone la publicación del convenio de colaboración entre el IVC y la Federación de Sociedades Musicales de la Comunitat Valenciana para el apoyo de dicha Federación",
+    "descripcionLeng": "RESOLUCIÓ per la qual es disposa la publicació del conveni de col·laboració entre l'IVC i la Federació de Societats Musicals de la Comunitat Valenciana, mitjançant el qual s’instrumenta la concessió d’una subvenció per el recolçament de la Federació",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "INSTITUT VALENCIÀ DE CULTURA (IVC)",
+    "codigoInvente": "INV00003641"
+  },
+  {
+    "id": 1083299,
+    "mrr": false,
+    "numeroConvocatoria": "881738",
+    "descripcion": "Convenio de colaboración entre la Conselleria de Sanidad y la Universidad CEU-Cardenal Herrera",
+    "descripcionLeng": "Conveni de col-laboració entre la Conselleria de Sanitat i  l'Universitat CEU-Cardenal Herrera",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083298,
+    "mrr": false,
+    "numeroConvocatoria": "881737",
+    "descripcion": "Convenio de colaboración entre la Conselleria de Sanidad y el colegio Oficial de Psicologia de la Comunitat Valenciana",
+    "descripcionLeng": "Conveni de col-laboració entre la Conselleria de Sanitat i  el Col·legi Oficial de Psicologia de la comunitat Valenciana",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083295,
+    "mrr": false,
+    "numeroConvocatoria": "881734",
+    "descripcion": "Convenio de colaboración entre la Conselleria de Sanidad y la Universitat Politècnica de València",
+    "descripcionLeng": "Conveni de col-laboració entre la Conselleria de Sanitat i  la Universitat Politècnica de València",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083294,
+    "mrr": false,
+    "numeroConvocatoria": "881733",
+    "descripcion": "Convenio de colaboración entre la Conselleria de Sanidad y la Universidad Miguel Hernández",
+    "descripcionLeng": "Conveni de col-laboració entre la Conselleria de Sanitat i la Universitat Miguel Hernández",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1083192,
+    "mrr": false,
+    "numeroConvocatoria": "881631",
+    "descripcion": "DECRETO 206/2025, de 26 de diciembre, del Consell, de aprobación bases reguladoras y la convocatoria para la concesión de subvenciones directas a diferentes colectivos destinadas a compensar gastos relacionados con la protección de la salud durante 2026",
+    "descripcionLeng": "DECRET 206/2025, de 26 de diciembre, del  Consell, d'aprovació de les bases reguladores i la convocatòria per  a la concessió de subvencions a diferents col.lectius destinades a compensar despeses relacionades amb la protecció de la salut en 2026",
+    "fechaRecepcion": "2026-01-15",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE SALUD PÚBLICA Y DEL SISTEMA SANITARIO PÚBLICO",
+    "codigoInvente": null
+  },
+  {
+    "id": 1082752,
+    "mrr": false,
+    "numeroConvocatoria": "881191",
+    "descripcion": "RESOLUCIÓN D.G. DE UNIVERSIDADES POR LA CUAL SE EFECTÚA UNA TRANSF. PARA COMPENSAR UNIVERSIDADES PÚBLICAS C. VALENCIANA DE LA REDUCCIÓN DEL PRECIO DEL CRÉDITO EN ENSEÑANZAS DE GRADO Y MÁSTER EN EL CURSO 2024-2025 RESPECTO AL CURSO 2016-2017. LÍNEA T0046.",
+    "descripcionLeng": "RESOLUCIÓN D.G. DE UNIVERSIDADES POR LA CUAL SE EFECTÚA UNA TRANSF. PARA COMPENSAR UNIVERSIDADES PÚBLICAS C. VALENCIANA DE LA REDUCCIÓN DEL PRECIO DEL CRÉDITO EN ENSEÑANZAS DE GRADO Y MÁSTER EN EL CURSO 2024-2025 RESPECTO AL CURSO 2016-2017. LÍNEA T0046.",
+    "fechaRecepcion": "2026-01-13",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE UNIVERSIDADES",
+    "codigoInvente": null
+  },
+  {
+    "id": 1082200,
+    "mrr": false,
+    "numeroConvocatoria": "880639",
+    "descripcion": "RESOLUCIÓN de 29 de diciembre de 2025, de la Conselleria de Educación, Cultura, y Universidades, de concesión del Premio Narrativa Juvenil Carme Miquel de 2025.",
+    "descripcionLeng": "RESOLUCIÓ de 29 de desembre de 2025, de la Conselleria d’Educació, Cultura, i Universitats, de concessió del Premi Narrativa Juvenil Carme Miquel de 2025.",
+    "fechaRecepcion": "2026-01-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE CULTURA Y DEPORTE",
+    "codigoInvente": null
+  },
+  {
+    "id": 1082170,
+    "mrr": false,
+    "numeroConvocatoria": "880609",
+    "descripcion": "RESOLUCIÓN de 23 de diciembre 2025 del director de la Agencia Valenciana de Fomento y Garantía Agraria por la que se convocan anticipadamente para el ejercicio 2026 las ayudas a las actividades de información y promoción de regímenes de calidad agroalimen",
+    "descripcionLeng": "Resolució de 23 de desembre 2025 del director de l'Agència Valenciana de Foment i Garantia Agrària per la qual es convoquen anticipadament per a l'exercici 2026 les ajudes a les activitats d'informació i promoció de règims de qualitat agroalimentària, por",
+    "fechaRecepcion": "2026-01-09",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "AGENCIA VALENCIANA DE FOMENTO Y GARANTÍA AGRARIA",
+    "codigoInvente": "INV00000152"
+  },
+  {
+    "id": 1081946,
+    "mrr": false,
+    "numeroConvocatoria": "880385",
+    "descripcion": "RESOLUCIÓN de la Conselleria de Agricultura, Agua, Ganadería y Pesca por la que se convocan de forma anticipada, para el ejercicio 2026, las ayudas para los Consejos Reguladores u Órganos de gestión de las figuras de calidad diferenciada agroalimentaria d",
+    "descripcionLeng": "RESOLUCIÓ de la Conselleria d’Agricultura, Aigua, Ramaderia i Pesca, per la qual es convoquen de manera anticipada, per a l’exercici 2026, les ajudes per als consells reguladors o òrgans de gestió de les figures de qualitat diferenciada agroalimentària de",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE AGRICULTURA, GANADERÍA Y PESCA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081812,
+    "mrr": false,
+    "numeroConvocatoria": "880251",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMAS DIVERSIDAD : UNIVERSIDAD JAIME I",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT JAUME I",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081810,
+    "mrr": false,
+    "numeroConvocatoria": "880249",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMAS DIVERSIDAD : UNIVERSIDAD MIGUEL HERNÁNDEZ",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT MIGUEL HERNÁNDEZ",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081809,
+    "mrr": false,
+    "numeroConvocatoria": "880248",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMAS DIVERSIDA : UNIVERSIDAD VALENCIA",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT VALÈNCIA",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081808,
+    "mrr": false,
+    "numeroConvocatoria": "880247",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMAS DIVERSIDAD : UNIVERSIDAD ALICANTE",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT ALACANT",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081807,
+    "mrr": false,
+    "numeroConvocatoria": "880246",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMAS DIVERSIDAD : UNIVERSIDAD POLITÈCNICA DE VALÈNCIA",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT POLITÈCNICA DE VALÈNCIA",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081804,
+    "mrr": false,
+    "numeroConvocatoria": "880243",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMA DIVERSIDAD: FUNDACION UNIVERSIDAD CATOLICA DE VALENCIA SAN VICENTE MARTIR",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: FUNDACION UNIVERSIDAD CATOLICA DE VALENCIA SAN VICENTE MARTIR",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081803,
+    "mrr": false,
+    "numeroConvocatoria": "880242",
+    "descripcion": "313H00 S0697 UNIVERSIDADES VALENCIANAS PROGRAMA DIVERSIDAD : UNIVERSIDAD CARDENAL HERRERA-CEU",
+    "descripcionLeng": "313H00 S0697 UNIVERSITATS VALENCIANES PROGRAMES DIVERSITAT: UNIVERSITAT CARDENAL HERRERA-CEU",
+    "fechaRecepcion": "2026-01-08",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE IGUALDAD Y DIVERSIDAD",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081332,
+    "mrr": false,
+    "numeroConvocatoria": "879771",
+    "descripcion": "Resolución de la Vicepresidencia Segunda y Conselleria de Presidencia de la Generalitat, por la que se convocan, para el ejercicio 2026, ayudas destinadas a municipios y entidades locales menores de la Comunitat Valenciana con población que no exceda de 5",
+    "descripcionLeng": "Resolució de la Vicepresidència Segona i Conselleria de Presidència de la Generalitat, per la qual es convoquen, per a l'exercici 2026, ajudes destinades a municipis i entitats locals menors de la Comunitat Valenciana amb població que no excedisca de 50.0",
+    "fechaRecepcion": "2026-01-05",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE PRESIDENCIA",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081287,
+    "mrr": false,
+    "numeroConvocatoria": "879726",
+    "descripcion": "RESOLUCIÓN DE LA CONSELLERA DE INNOVACIÓN, INDÚSTRIA, COMERCIO Y TURISMO POR LA QUE SE REGULA Y CONCEDE UNA SUBVENCIÓN NOMINATIVA EN RÉGIMEN DE CONCESIÓN DIRECTA A LA FUNDACIÓN ONCE",
+    "descripcionLeng": "RESOLUCIÓ DE LA CONSELLERA D’INNOVACIÓ, INDÚSTRIA, COMERÇ I TURISME, PER LA QUAL ES REGULA I CONCEDIX UNA SUBVENCIÓ NOMINATIVA EN RÈGIM DE CONCESSIÓ DIRECTA  A LA FUNDACIÓ ONCE",
+    "fechaRecepcion": "2026-01-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE INNOVACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081284,
+    "mrr": false,
+    "numeroConvocatoria": "879723",
+    "descripcion": "RESOLUCIÓN DE LA CONSELLERA DE INNOVACIÓN, INDÚSTRIA, COMERCIO Y TURISMO POR LA QUE SE REGULA Y CONCEDE UNA SUBVENCIÓN NOMINATIVA EN RÉGIMEN DE CONCESIÓN DIRECTA A LA FUNDACIÓN ONCE",
+    "descripcionLeng": "RESOLUCIÓ DE LA CONSELLERA D’INNOVACIÓ, INDÚSTRIA, COMERÇ I TURISME, PER LA QUAL ES REGULA I CONCEDIX UNA SUBVENCIÓ NOMINATIVA EN RÈGIM DE CONCESSIÓ DIRECTA  A LA FUNDACIÓ ONCE",
+    "fechaRecepcion": "2026-01-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE INNOVACIÓN",
+    "codigoInvente": null
+  },
+  {
+    "id": 1081279,
+    "mrr": false,
+    "numeroConvocatoria": "879718",
+    "descripcion": "Resolución de 30 de diciembre de 2025, de la Vicepresidencia Segunda y Conselleria de Presidencia, por la que se convocan, para 2026, las subvenciones para el fomento del valenciano en el ámbito de los medios de comunicación y publicaciones privadas",
+    "descripcionLeng": "Resolució de 30 de desembre de 2025, de la Vicepresidència Segona i Conselleria de Presidència, per la qual es convoquen, per a 2026, les subvencions per al foment del valencià en l'àmbit dels mitjans de comunicació i publicacions privades",
+    "fechaRecepcion": "2026-01-02",
+    "nivel1": "AUTONOMICA",
+    "nivel2": "COMUNITAT VALENCIANA",
+    "nivel3": "SECRETARÍA AUTONÓMICA DE EDUCACIÓN",
+    "codigoInvente": null
   }
-  return fechas;
-}
-
-function extraerOrg(title) {
-  const m = title.match(/^(.+?)\s*[-–—.]\s/);
-  return m ? m[1].trim().slice(0, 80) : null;
-}
-
-function inferirBenef(text) {
-  const t = text.toLowerCase();
-  if (t.includes('empresa') || t.includes('pyme') || t.includes('autónomo')) return 'Empresa';
-  if (t.includes('ong') || t.includes('asociaci') || t.includes('fundaci') || t.includes('entidad sin')) return 'ONG / Tercer sector';
-  if (t.includes('universid') || t.includes('investigaci')) return 'Universidad / Investigación';
-  if (t.includes('ayuntamiento') || t.includes('municipal') || t.includes('local')) return 'Entidad local';
-  return 'Entidad pública';
-}
-
-function extraerImporte(text) {
-  const m = text.match(/[\d.,]+\s*(millones?|M€| M |miles?|K€|€|euros?)/i);
-  return m ? m[0].trim() : null;
-}
-
-function extraerFecha(text) {
-  const m = text.match(/\b(\d{1,2})[\/\-.](0?[1-9]|1[0-2])[\/\-.](\d{2,4})\b/);
-  if (!m) return null;
-  const y = m[3].length === 2 ? '20' + m[3] : m[3];
-  return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-}
-
-// ── Mapper RSS canal ayudas ────────────────────────────────────────────────
-
-function mapRSSItem(item) {
-  const get = tag => {
-    const m = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([^<]*)</${tag}>`, 'i'));
-    return m ? (m[1] || m[2] || '').trim() : '';
-  };
-  const title   = get('title');
-  const link    = get('link') || get('guid');
-  const desc    = get('description').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const pubDate = get('pubDate');
-  const dept    = get('departamento') || extraerOrg(title) || 'BOE — Administración General del Estado';
-
-  const ambito = detectarAmbito(dept, title);
-
-  return {
-    id:               'boe-ayudas-' + Buffer.from(link || title).toString('base64').slice(0, 16),
-    titulo:           title.slice(0, 200),
-    organismo:        dept,
-    ambito,
-    fuente:           'boe-ayudas',
-    estado:           'Abierta',
-    beneficiario:     inferirBenef(title + ' ' + desc),
-    importe:          extraerImporte(title + ' ' + desc),
-    cierre:           extraerFecha(title + ' ' + desc),
-    descripcion:      desc.slice(0, 500),
-    enlace:           link,
-    fechaPublicacion: pubDate,
-  };
-}
-
-// ── Extraer Sección III del sumario BOE ───────────────────────────────────
-
-function extraerSec3(json) {
-  const items = [];
-  try {
-    const sumario = json?.data?.sumario;
-    if (!sumario) return items;
-    const diarios = Array.isArray(sumario.diario) ? sumario.diario : [sumario.diario];
-    for (const diario of diarios) {
-      const secciones = Array.isArray(diario.seccion) ? diario.seccion : [diario.seccion];
-      for (const sec of secciones) {
-        if (sec?.codigo !== '3') continue;
-        const deptos = Array.isArray(sec.departamento) ? sec.departamento : [sec.departamento];
-        for (const dep of deptos) {
-          const directos = dep.item
-            ? (Array.isArray(dep.item) ? dep.item : [dep.item])
-            : [];
-          const epis = dep.epigrafe
-            ? (Array.isArray(dep.epigrafe) ? dep.epigrafe : [dep.epigrafe])
-            : [];
-          const deEpis = epis.flatMap(e =>
-            e.item ? (Array.isArray(e.item) ? e.item : [e.item]) : []
-          );
-          for (const it of [...directos, ...deEpis]) {
-            if (!it?.titulo) continue;
-            const titulo = it.titulo;
-            const relevante = KW_SUBV.some(k => titulo.toLowerCase().includes(k));
-            if (!relevante) continue;
-
-            const organismo = dep.nombre || 'BOE — Sección III';
-            const ambito    = detectarAmbito(organismo, titulo);
-
-            items.push({
-              id:               'boe-sec3-' + (it.identificador || Buffer.from(titulo).toString('base64').slice(0, 12)),
-              titulo:           titulo.slice(0, 200),
-              organismo,
-              ambito,
-              fuente:           'boe-sec3',
-              estado:           'Abierta',
-              beneficiario:     inferirBenef(titulo),
-              importe:          extraerImporte(titulo),
-              cierre:           null,
-              descripcion:      `Publicado en BOE Sección III. Departamento: ${organismo}.`,
-              enlace:           it.url_html || `https://www.boe.es/diario_boe/txt.php?id=${it.identificador}`,
-              fechaPublicacion: null,
-            });
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('extraerSec3 error:', e.message);
-  }
-  return items;
-}
-
-// ── Handler principal ──────────────────────────────────────────────────────
-
-module.exports = async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    return res.status(200).end();
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800');
-
-  const fuente = req.query.fuente || 'ayudas';
-
-  try {
-    if (fuente === 'ayudas') {
-      const r = await fetch(CANAL_AYUDAS, {
-        headers: { 'User-Agent': 'FinanciApp/2.0 (https://financiapp-wvx2.vercel.app)' },
-      });
-      if (!r.ok) throw new Error(`BOE canal ayudas HTTP ${r.status}`);
-      const xml      = await r.text();
-      const rawItems = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m => m[1]);
-      if (!rawItems.length) throw new Error('RSS sin items');
-      const data = rawItems.map(mapRSSItem).filter(Boolean);
-      return res.status(200).json({ ok: true, fuente: 'boe-ayudas', total: data.length, data });
-    }
-
-    if (fuente === 'sec3') {
-      const fechas   = diasHabiles(3);
-      const allItems = [];
-      await Promise.all(fechas.map(async fecha => {
-        try {
-          const r = await fetch(API_SUMARIO + fecha, {
-            headers: { 'Accept': 'application/json', 'User-Agent': 'FinanciApp/2.0' },
-          });
-          if (!r.ok) return;
-          const json = await r.json();
-          allItems.push(...extraerSec3(json));
-        } catch (e) {
-          console.warn(`BOE sumario ${fecha}:`, e.message);
-        }
-      }));
-      return res.status(200).json({ ok: true, fuente: 'boe-sec3', total: allItems.length, data: allItems });
-    }
-
-    return res.status(400).json({ ok: false, error: 'Parámetro fuente inválido. Usa: ayudas | sec3' });
-
-  } catch (err) {
-    console.error('BOE handler error:', err.message);
-    return res.status(500).json({ ok: false, error: err.message });
-  }
-};
+]
