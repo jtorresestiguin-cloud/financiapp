@@ -169,6 +169,12 @@ const ACTIVE_IDS = [
   'EU4H-2025-PJ-11',
   'EU4H-2026-PJ-01',
 
+ // ── DIGITAL EUROPE PROGRAMME (DIGITAL) ────────────────────────────────────────────────────────────
+  'DIGITAL-2026-SKILLS-10',
+  'DIGITAL-2026-BESTUSE-10',
+  'DIGITAL-ECCC-2026-DEPLOY-CYBER-10',
+  'DIGITAL-2026-AI-DATA-10',
+  
   // ── Interreg / Cooperación territorial ───────────────────────────────────
   'INTERREG-MED-2025-1-01',
   'INTERREG-NEXT-MED-2025',
