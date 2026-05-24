@@ -1,111 +1,167 @@
 /**
- * /api/gva.js — v3 con BDNS
+ * /api/boe.js
+ * Proxy para las fuentes del BOE:
+ *   GET /api/boe?fuente=ayudas   → RSS canal ayudas
+ *   GET /api/boe?fuente=sec3     → API sumario sección III (últimos 3 días hábiles)
  *
- * Consulta la API REST de la BDNS filtrando por:
- *   - Comunitat Valenciana (ambitoGeografico=9, código de la CV)
- *   - Convocatorias abiertas (estado=1)
- *
- * Si la BDNS no es accesible desde Vercel, mantiene datos de respaldo.
- *
- * Documentación BDNS API:
- * https://www.infosubvenciones.es/bdnstrans/ayuda/pdf/AYUDA_API_REST
+ * Detecta automáticamente convocatorias de la Comunitat Valenciana
+ * y las etiqueta como ambito:'loc' en lugar de 'nac'.
  */
 
-const PORTAL_BASE = 'https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias/';
-const NOW         = new Date();
+const CANAL_AYUDAS = 'https://www.boe.es/rss/canal.php?c=ayudas';
+const API_SUMARIO  = 'https://boe.es/datosabiertos/api/boe/sumario/';
 
-// URLs a probar para la BDNS — distintos parámetros documentados
-const BDNS_URLS = [
-  // Convocatorias abiertas de la Comunitat Valenciana
-  'https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias?page=0&pageSize=50&estado=1&ambitoGeografico=9',
-  // Sin filtro de ámbito — todas las abiertas
-  'https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias?page=0&pageSize=20&estado=1',
-  // Formato alternativo documentado
-  'https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias.json?page=0&pageSize=20&estado=1',
+const KW_SUBV = [
+  'subvenci', 'convocator', 'ayuda', 'financiaci',
+  'beca', 'programa de apoyo', 'concurso de', 'fondo',
 ];
 
-const HEADERS = {
-  'User-Agent':  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Accept':      'application/json, text/html, */*',
-  'Accept-Language': 'es-ES,es;q=0.9',
-  'Referer':     'https://www.infosubvenciones.es/',
-  'Origin':      'https://www.infosubvenciones.es',
-};
+// ── Detección Comunitat Valenciana ─────────────────────────────────────────
+// Si el organismo o título contiene alguno de estos términos → ambito = 'loc'
+const KW_CV = [
+  'generalitat valenciana', 'conselleria', 'consell valencià',
+  'ivace', 'ivaj', 'ivam', 'ivass', 'ivforce',
+  'diputació de valència', "diputació d'alacant", 'diputació de castelló',
+  'diputación de valencia', 'diputación de alicante', 'diputación de castellón',
+  'comunitat valenciana', 'comunidad valenciana',
+  'gva', 'dogv', 'diari oficial de la generalitat',
+];
 
-function stripHtml(s) {
-  return (s||'').replace(/<[^>]+>/g,' ').replace(/&[a-z#\d]+;/gi,' ').replace(/\s+/g,' ').trim();
+function detectarAmbito(organismo, titulo) {
+  const t = ((organismo || '') + ' ' + (titulo || '')).toLowerCase();
+  return KW_CV.some(kw => t.includes(kw)) ? 'loc' : 'nac';
 }
-function fmtImporte(n) {
-  const v=parseFloat(String(n||'').replace(/[^0-9.]/g,''));
-  if (isNaN(v)||v===0) return null;
-  if (v>=1_000_000) return `€${(v/1_000_000).toFixed(1)}M`;
-  if (v>=1_000)     return `€${Math.round(v/1_000)}K`;
-  return `€${Math.round(v).toLocaleString('es-ES')}`;
-}
-function parseDate(d) {
-  if (!d) return null;
-  // BDNS usa formato dd/mm/yyyy o yyyy-MM-dd
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
-    const [dd,mm,yyyy] = d.split('/');
-    return `${yyyy}-${mm}-${dd}`;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function diasHabiles(n) {
+  const fechas = [];
+  const hoy = new Date();
+  let cursor = new Date(hoy);
+  while (fechas.length < n) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) {
+      fechas.push(cursor.toISOString().slice(0, 10).replace(/-/g, ''));
+    }
+    cursor.setDate(cursor.getDate() - 1);
   }
-  try { const dt=new Date(d); if (!isNaN(dt)) return dt.toISOString().split('T')[0]; } catch {}
-  return null;
-}
-function isFuture(s) {
-  if (!s) return true;
-  try { return new Date(s)>NOW; } catch { return true; }
+  return fechas;
 }
 
-function mapConvocatoria(c) {
-  if (!c) return null;
-  const titulo = c.titulo || c.descripcion || c.objeto || '';
-  if (!titulo) return null;
+function extraerOrg(title) {
+  const m = title.match(/^(.+?)\s*[-–—.]\s/);
+  return m ? m[1].trim().slice(0, 80) : null;
+}
 
-  const deadline = parseDate(c.fechaFinSolicitud || c.fechaFin || c.plazoSolicitud);
-  if (deadline && !isFuture(deadline)) return null; // descartada si ya cerró
+function inferirBenef(text) {
+  const t = text.toLowerCase();
+  if (t.includes('empresa') || t.includes('pyme') || t.includes('autónomo')) return 'Empresa';
+  if (t.includes('ong') || t.includes('asociaci') || t.includes('fundaci') || t.includes('entidad sin')) return 'ONG / Tercer sector';
+  if (t.includes('universid') || t.includes('investigaci')) return 'Universidad / Investigación';
+  if (t.includes('ayuntamiento') || t.includes('municipal') || t.includes('local')) return 'Entidad local';
+  return 'Entidad pública';
+}
 
-  const bdnsId = c.idConvocatoria || c.codigoBDNS || c.id || '';
+function extraerImporte(text) {
+  const m = text.match(/[\d.,]+\s*(millones?|M€| M |miles?|K€|€|euros?)/i);
+  return m ? m[0].trim() : null;
+}
+
+function extraerFecha(text) {
+  const m = text.match(/\b(\d{1,2})[\/\-.](0?[1-9]|1[0-2])[\/\-.](\d{2,4})\b/);
+  if (!m) return null;
+  const y = m[3].length === 2 ? '20' + m[3] : m[3];
+  return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+// ── Mapper RSS canal ayudas ────────────────────────────────────────────────
+
+function mapRSSItem(item) {
+  const get = tag => {
+    const m = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([^<]*)</${tag}>`, 'i'));
+    return m ? (m[1] || m[2] || '').trim() : '';
+  };
+  const title   = get('title');
+  const link    = get('link') || get('guid');
+  const desc    = get('description').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const pubDate = get('pubDate');
+  const dept    = get('departamento') || extraerOrg(title) || 'BOE — Administración General del Estado';
+
+  const ambito = detectarAmbito(dept, title);
 
   return {
-    id:               'gva-bdns-' + bdnsId,
-    titulo:           titulo.slice(0, 200),
-    organismo:        c.organo || c.organismo || c.nombreOrgano || 'Administración Pública',
-    ambito:           'loc',
-    fuente:           'gva',
+    id:               'boe-ayudas-' + Buffer.from(link || title).toString('base64').slice(0, 16),
+    titulo:           title.slice(0, 200),
+    organismo:        dept,
+    ambito,
+    fuente:           'boe-ayudas',
     estado:           'Abierta',
-    beneficiario:     c.tipoBeneficiario || c.beneficiarios || 'Entidad pública',
-    importe:          fmtImporte(c.importeTotal || c.presupuesto || c.dotacionTotal),
-    cierre:           deadline,
-    descripcion:      stripHtml(c.objeto || c.descripcion || titulo).slice(0, 500),
-    enlace:           bdnsId
-                        ? `${PORTAL_BASE}${bdnsId}`
-                        : 'https://www.infosubvenciones.es/bdnstrans/GE/es/convocatorias',
-    fechaPublicacion: parseDate(c.fechaPublicacion || c.fechaRegistro || c.fechaInicio),
-    referencia:       bdnsId ? String(bdnsId) : null,
+    beneficiario:     inferirBenef(title + ' ' + desc),
+    importe:          extraerImporte(title + ' ' + desc),
+    cierre:           extraerFecha(title + ' ' + desc),
+    descripcion:      desc.slice(0, 500),
+    enlace:           link,
+    fechaPublicacion: pubDate,
   };
 }
 
-async function fetchBDNS(url) {
-  const ctrl    = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 10000);
+// ── Extraer Sección III del sumario BOE ───────────────────────────────────
+
+function extraerSec3(json) {
+  const items = [];
   try {
-    const r = await fetch(url, { headers: HEADERS, signal: ctrl.signal });
-    clearTimeout(timeout);
-    if (!r.ok) return { ok: false, status: r.status };
-    const ct = r.headers.get('content-type') || '';
-    const text = await r.text();
-    // Intentar parsear como JSON
-    if (ct.includes('json') || text.trim().startsWith('{') || text.trim().startsWith('[')) {
-      const json = JSON.parse(text);
-      return { ok: true, json, preview: text.slice(0, 500) };
+    const sumario = json?.data?.sumario;
+    if (!sumario) return items;
+    const diarios = Array.isArray(sumario.diario) ? sumario.diario : [sumario.diario];
+    for (const diario of diarios) {
+      const secciones = Array.isArray(diario.seccion) ? diario.seccion : [diario.seccion];
+      for (const sec of secciones) {
+        if (sec?.codigo !== '3') continue;
+        const deptos = Array.isArray(sec.departamento) ? sec.departamento : [sec.departamento];
+        for (const dep of deptos) {
+          const directos = dep.item
+            ? (Array.isArray(dep.item) ? dep.item : [dep.item])
+            : [];
+          const epis = dep.epigrafe
+            ? (Array.isArray(dep.epigrafe) ? dep.epigrafe : [dep.epigrafe])
+            : [];
+          const deEpis = epis.flatMap(e =>
+            e.item ? (Array.isArray(e.item) ? e.item : [e.item]) : []
+          );
+          for (const it of [...directos, ...deEpis]) {
+            if (!it?.titulo) continue;
+            const titulo = it.titulo;
+            const relevante = KW_SUBV.some(k => titulo.toLowerCase().includes(k));
+            if (!relevante) continue;
+
+            const organismo = dep.nombre || 'BOE — Sección III';
+            const ambito    = detectarAmbito(organismo, titulo);
+
+            items.push({
+              id:               'boe-sec3-' + (it.identificador || Buffer.from(titulo).toString('base64').slice(0, 12)),
+              titulo:           titulo.slice(0, 200),
+              organismo,
+              ambito,
+              fuente:           'boe-sec3',
+              estado:           'Abierta',
+              beneficiario:     inferirBenef(titulo),
+              importe:          extraerImporte(titulo),
+              cierre:           null,
+              descripcion:      `Publicado en BOE Sección III. Departamento: ${organismo}.`,
+              enlace:           it.url_html || `https://www.boe.es/diario_boe/txt.php?id=${it.identificador}`,
+              fechaPublicacion: null,
+            });
+          }
+        }
+      }
     }
-    return { ok: false, notJson: true, preview: text.slice(0, 300), ct };
   } catch (e) {
-    clearTimeout(timeout);
-    return { ok: false, error: e.message };
+    console.error('extraerSec3 error:', e.message);
   }
+  return items;
 }
+
+// ── Handler principal ──────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -118,86 +174,43 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800');
 
-  // Probar todas las URLs de la BDNS en orden
-  const diagnostico = [];
-  for (const url of BDNS_URLS) {
-    const result = await fetchBDNS(url);
-    diagnostico.push({ url, ...result });
+  const fuente = req.query.fuente || 'ayudas';
 
-    if (result.ok && result.json) {
-      // Extraer el array de convocatorias — puede estar en distintos campos
-      const json = result.json;
-      const lista =
-        json.content ||       // Spring Boot paginado
-        json.convocatorias ||
-        json.data ||
-        json.results ||
-        (Array.isArray(json) ? json : []);
-
-      if (lista.length > 0) {
-        const data = lista.map(mapConvocatoria).filter(Boolean);
-        return res.status(200).json({
-          ok:    true,
-          fuente: 'gva',
-          via:   'BDNS API',
-          url_usada: url,
-          total: data.length,
-          data,
-        });
-      }
+  try {
+    if (fuente === 'ayudas') {
+      const r = await fetch(CANAL_AYUDAS, {
+        headers: { 'User-Agent': 'FinanciApp/2.0 (https://financiapp-wvx2.vercel.app)' },
+      });
+      if (!r.ok) throw new Error(`BOE canal ayudas HTTP ${r.status}`);
+      const xml      = await r.text();
+      const rawItems = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map(m => m[1]);
+      if (!rawItems.length) throw new Error('RSS sin items');
+      const data = rawItems.map(mapRSSItem).filter(Boolean);
+      return res.status(200).json({ ok: true, fuente: 'boe-ayudas', total: data.length, data });
     }
+
+    if (fuente === 'sec3') {
+      const fechas   = diasHabiles(3);
+      const allItems = [];
+      await Promise.all(fechas.map(async fecha => {
+        try {
+          const r = await fetch(API_SUMARIO + fecha, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'FinanciApp/2.0' },
+          });
+          if (!r.ok) return;
+          const json = await r.json();
+          allItems.push(...extraerSec3(json));
+        } catch (e) {
+          console.warn(`BOE sumario ${fecha}:`, e.message);
+        }
+      }));
+      return res.status(200).json({ ok: true, fuente: 'boe-sec3', total: allItems.length, data: allItems });
+    }
+
+    return res.status(400).json({ ok: false, error: 'Parámetro fuente inválido. Usa: ayudas | sec3' });
+
+  } catch (err) {
+    console.error('BOE handler error:', err.message);
+    return res.status(500).json({ ok: false, error: err.message });
   }
-
-  // Si BDNS no es accesible → datos de respaldo curados
-  const respaldo = [
-    {
-      id:'gva-respaldo-1',
-      titulo:'Ajudes per a la modernització d\'infraestructures de serveis socials 2026',
-      organismo:'Conselleria de Serveis Socials — Generalitat Valenciana',
-      ambito:'loc', fuente:'gva', estado:'Próxima',
-      beneficiario:'Entidad pública',
-      importe:'€8.500.000', cierre:'2026-09-01',
-      descripcion:'Convocatoria de la GVA para financiar obras, equipamiento y proyectos técnicos de centros de servicios sociales. Tope 150.000€ por entidad.',
-      enlace:'https://serviciossociales.gva.es',
-      fechaPublicacion:'2026-03-10', referencia:null,
-    },
-    {
-      id:'gva-respaldo-2',
-      titulo:'Subvencions per al foment de la cultura local — Diputació de València',
-      organismo:'Diputació de València',
-      ambito:'loc', fuente:'gva', estado:'Abierta',
-      beneficiario:'Entidad pública',
-      importe:'€80.000', cierre:'2026-06-10',
-      descripcion:'Ayudas a entidades locales para el fomento de la cultura y el patrimonio en el ámbito provincial.',
-      enlace:'https://www.dival.es',
-      fechaPublicacion:'2026-04-01', referencia:null,
-    },
-    {
-      id:'gva-respaldo-3',
-      titulo:'Ajudes IVACE per a la innovació en PIMES valencianes 2026',
-      organismo:'IVACE — Institut Valencià de Competitivitat',
-      ambito:'loc', fuente:'gva', estado:'Abierta',
-      beneficiario:'Empresa',
-      importe:'€150.000', cierre:'2026-07-31',
-      descripcion:'Ayudas del IVACE para incorporación de tecnologías innovadoras y digitalización en pymes valencianas.',
-      enlace:'https://www.ivace.es',
-      fechaPublicacion:'2026-04-10', referencia:null,
-    },
-  ];
-
-  return res.status(200).json({
-    ok:          true,
-    fuente:      'gva',
-    via:         'respaldo curado (BDNS no accesible)',
-    diagnostico: diagnostico.map(d => ({
-      url: d.url,
-      status: d.status,
-      error: d.error,
-      notJson: d.notJson,
-      ct: d.ct,
-      preview: d.preview?.slice(0, 100),
-    })),
-    total:       respaldo.length,
-    data:        respaldo,
-  });
 };
