@@ -1,56 +1,54 @@
 /**
  * /api/eu.js
  *
- * Usa la API pública del portal EU Funding & Tenders.
- * Endpoint documentado en:
+ * Implementación exacta según documentación oficial EU F&T Portal APIs
  * https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis
  *
- * Formato correcto según documentación oficial:
- * POST https://api.tech.ec.europa.eu/search-api/prod/rest/search
- * Content-Type: application/x-www-form-urlencoded
+ * Endpoint correcto:
+ *   POST https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***
  *
- * Parámetros:
- *   apiKey    = SEDIA
- *   text      = *
- *   pageSize  = 50
- *   pageNumber= 1
- *   query     = { JSON stringificado con filtros }
+ * - apiKey y text van en la QUERY STRING de la URL
+ * - query va en el FORM-DATA del body (multipart/form-data o x-www-form-urlencoded)
+ * - La respuesta tiene estructura: { totalResults, results: [...] }
+ * - Cada resultado tiene sus campos en metadata: {}
+ *
+ * Filtramos:
+ *   type: 1 (grants/calls for proposals), 2 (prizes), 8 (innovation procurement)
+ *   status: 31094501 (Open) + 31094502 (Forthcoming)
+ *   languages: ["en"] para evitar duplicados multilingües (nota de la documentación)
  */
 
-const SEARCH_ENDPOINT = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search';
-const PORTAL_BASE     = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
-
-const HEADERS_FORM = {
-  'Content-Type':    'application/x-www-form-urlencoded',
-  'Accept':          'application/json',
-  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-  'Origin':          'https://ec.europa.eu',
-  'Referer':         'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
-};
-
+const API_URL = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***';
+const PORTAL_BASE = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
 const NOW = new Date();
 
-// Query con tipos 1,2,8 y estados open+forthcoming
-const QUERY_OBJ = {
+// Query exacta según documentación — grants + prizes open/forthcoming
+const QUERY = JSON.stringify({
   bool: {
     must: [
-      { terms: { type:   ['1', '2', '8'] } },
-      { terms: { status: ['31094501', '31094502'] } },
+      {
+        terms: {
+          type: ['1', '2', '8'],
+        },
+      },
+      {
+        terms: {
+          status: ['31094501', '31094502'],
+        },
+      },
     ],
   },
-};
+});
 
-function buildFormBody(pageNumber = 1, pageSize = 50) {
-  const params = new URLSearchParams();
-  params.append('apiKey',     'SEDIA');
-  params.append('text',       '*');
-  params.append('pageSize',   String(pageSize));
-  params.append('pageNumber', String(pageNumber));
-  params.append('sortBy',     'deadlineDate');
-  params.append('orderBy',    'ASC');
-  params.append('query',      JSON.stringify(QUERY_OBJ));
-  return params.toString();
+function buildFormData(pageNumber = 1, pageSize = 50) {
+  const fd = new URLSearchParams();
+  fd.append('query',     QUERY);
+  fd.append('languages', '["en"]');  // evitar duplicados multilingües
+  fd.append('pageNumber', String(pageNumber));
+  fd.append('pageSize',   String(pageSize));
+  fd.append('sortBy',    'deadlineDate');
+  fd.append('orderBy',   'ASC');
+  return fd.toString();
 }
 
 function stripHtml(s) {
@@ -75,73 +73,114 @@ function inferirBenef(tags, title) {
   return 'Empresa / Universidad / Entidad pública';
 }
 
-function mapHit(hit) {
-  const s = hit._source || hit.fields || hit || {};
+// Extrae el primer valor de un campo que puede ser array o valor directo
+function val(field) {
+  if (!field) return null;
+  if (Array.isArray(field)) return field[0] || null;
+  return field;
+}
 
-  const statusCode = String(s.status || '').trim();
+function mapResult(item) {
+  // Según la documentación, los campos están en metadata{}
+  const md = item.metadata || {};
+
+  const statusArr  = md.status        || [];
+  const statusCode = String(val(statusArr) || item.status || '').trim();
+
+  // Solo open (31094501) y forthcoming (31094502)
+  if (statusCode === '31094503') return null;
+
   let estado = 'Abierta';
   if (statusCode === '31094502') estado = 'Próxima';
 
-  const deadline = s.deadlineDate || s.deadline || null;
+  // Deadline — descartar si ya pasó (solo para abiertas)
+  const deadlineArr = md.deadlineDate || md.deadline || [];
+  const deadline    = val(deadlineArr);
   if (estado === 'Abierta' && deadline) {
     try { if (new Date(deadline) < NOW) return null; } catch {}
   }
 
-  const id   = s.identifier || s.topicIdentifier || s.id || '';
-  const title = s.title || s.topicTitle || id || 'Convocatoria EU';
-  const prog  = s.programmeName || s.frameworkProgramme || s.callTitle || '';
-  const desc  = stripHtml(s.description || s.objective || s.topicDescription || '');
-  const tags  = s.tags || s.keywords || s.crossCuttingPriorities || [];
+  // Identificador y título
+  const identifierArr = md.identifier || md.topicIdentifier || [];
+  const identifier    = val(identifierArr) || item.reference || '';
+  const titleArr      = md.title || md.topicTitle || [];
+  const title         = val(titleArr) || item.title || item.content || identifier || 'Convocatoria EU';
+
+  // Programa
+  const progArr = md.programmeName || md.frameworkProgramme || md.programmes || [];
+  const prog    = val(progArr) || '';
+
+  // Descripción — puede estar en content o en metadata
+  const desc = stripHtml(
+    item.content ||
+    val(md.description) ||
+    val(md.objective) ||
+    val(md.topicDescription) ||
+    ''
+  );
+
+  // Presupuesto
+  const budgetArr = md.budgetTopicAction || md.budget || md.totalBudget || md.euContributionAmount || [];
+  const budget    = val(budgetArr);
+
+  // Fecha publicación/apertura
+  const pubArr = md.startDate || md.openingDate || md.publicationDate || md.esDA_IngestDate || [];
+  const pubDate = val(pubArr);
+
+  // Tags/keywords
+  const tags = md.keywords || md.tags || md.crossCuttingPriorities || [];
+
+  // URL directa
+  const urlArr  = md.url || md.esST_URL || [];
+  const urlRaw  = val(urlArr) || '';
+  const enlace  = (urlRaw && urlRaw !== 'NA')
+    ? urlRaw.replace(/^uri -> /, '')
+    : (identifier ? PORTAL_BASE + identifier.toLowerCase() : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals');
+
+  if (!title || title === identifier) return null;
 
   return {
-    id:               'eu-' + (id || Math.random().toString(36).slice(2)),
+    id:               'eu-' + (identifier || item.reference || Math.random().toString(36).slice(2)),
     titulo:           title.slice(0, 200),
     organismo:        prog ? `Comisión Europea — ${prog}` : 'Comisión Europea',
     ambito:           'eu',
     fuente:           'eu',
     estado,
     beneficiario:     inferirBenef(tags, title),
-    importe:          fmtImporte(s.budgetTopicAction || s.budget || s.totalBudget),
+    importe:          fmtImporte(budget),
     cierre:           deadline,
     descripcion:      desc.slice(0, 500),
-    enlace:           id ? PORTAL_BASE + id.toLowerCase() : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
-    fechaPublicacion: s.startDate || s.openingDate || s.publicationDate || null,
-    referencia:       id.toUpperCase() || null,
+    enlace,
+    fechaPublicacion: pubDate,
+    referencia:       identifier ? identifier.toUpperCase() : null,
   };
 }
 
 async function fetchPage(pageNumber, pageSize = 50) {
   const ctrl    = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 9000);
+  const timeout = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const r = await fetch(SEARCH_ENDPOINT, {
+    const r = await fetch(API_URL, {
       method:  'POST',
-      headers: HEADERS_FORM,
-      body:    buildFormBody(pageNumber, pageSize),
-      signal:  ctrl.signal,
+      headers: {
+        'Content-Type':    'application/x-www-form-urlencoded',
+        'Accept':          'application/json',
+        'User-Agent':      'Mozilla/5.0 (compatible; FinanciApp/2.0)',
+        'Accept-Language': 'en',
+      },
+      body:   buildFormData(pageNumber, pageSize),
+      signal: ctrl.signal,
     });
     clearTimeout(timeout);
     if (!r.ok) {
-      const errText = await r.text().catch(() => '');
-      throw new Error(`HTTP ${r.status}: ${errText.slice(0, 200)}`);
+      const txt = await r.text().catch(() => '');
+      throw new Error(`HTTP ${r.status}: ${txt.slice(0, 150)}`);
     }
     const json = await r.json();
-
-    const hits =
-      json?.hits?.hits ||
-      json?.results ||
-      json?.data?.results ||
-      json?.topicResultDto?.topics ||
-      (Array.isArray(json) ? json : []);
-
-    const total =
-      json?.hits?.total?.value ||
-      json?.hits?.total ||
-      json?.total ||
-      json?.topicResultDto?.totalCount ||
-      hits.length;
-
-    return { hits, total: Number(total) || hits.length };
+    // Según documentación: { totalResults, results: [...] }
+    const results      = json.results || json.hits?.hits || [];
+    const totalResults = json.totalResults || json.hits?.total?.value || results.length;
+    return { results, total: Number(totalResults) };
   } catch (e) {
     clearTimeout(timeout);
     throw e;
@@ -160,23 +199,25 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
 
   try {
-    // Página 1
-    const page1       = await fetchPage(1, 50);
+    // Página 1 — obtener datos y total real
+    const page1      = await fetchPage(1, 50);
     const totalPortal = page1.total;
-    let allHits       = [...page1.hits];
+    let allResults   = [...page1.results];
 
-    // Páginas 2 y 3 en paralelo (máx 150 resultados dentro del timeout)
+    // Páginas adicionales en paralelo (máx 150 resultados dentro del timeout de Vercel)
     const totalPages = Math.min(3, Math.ceil(totalPortal / 50));
     if (totalPages > 1) {
       const rest = await Promise.allSettled(
         Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 2, 50))
       );
       rest.forEach(r => {
-        if (r.status === 'fulfilled') allHits.push(...r.value.hits);
+        if (r.status === 'fulfilled') allResults.push(...r.value.results);
       });
     }
 
-    const data = allHits.map(mapHit).filter(Boolean);
+    const data = allResults.map(mapResult).filter(Boolean);
+
+    // Ordenar: Abiertas primero por deadline ASC, luego Próximas
     data.sort((a, b) => {
       if (a.estado !== b.estado) return a.estado === 'Abierta' ? -1 : 1;
       if (!a.cierre && !b.cierre) return 0;
@@ -188,7 +229,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ok:           true,
       fuente:       'eu',
-      via:          'search-api (form)',
+      via:          'SEDIA search-api (form-data)',
       total_portal: totalPortal,
       total:        data.length,
       data,
