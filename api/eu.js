@@ -223,10 +223,16 @@ function mapTopicDetail(json) {
     const sid=action?.status?.id;
     const sabb=(action?.status?.abbreviation||'').toLowerCase();
     if (sid===31094503||sabb==='closed') continue;
-    const dl=parseDate(action?.deadlineDates?.[0]);
+    const dl          = parseDate(action?.deadlineDates?.[0]);
+    const openingDate = parseDate(action?.plannedOpeningDate);
     if (sabb==='forthcoming'||sid===31094502) {
-      estado='Próxima'; deadline=dl;
-      openDate=parseDate(action?.plannedOpeningDate); break;
+      // Si la fecha de apertura ya pasó → mostrar como Abierta
+      // (el portal tarda en actualizar el estado a "Open")
+      if (openingDate && new Date(openingDate) <= NOW) {
+        if (!isFuture(dl)) continue; // deadline también pasado → descartar
+        estado='Abierta'; deadline=dl; openDate=openingDate; break;
+      }
+      estado='Próxima'; deadline=dl; openDate=openingDate; break;
     }
     if (sabb==='open'||sid===31094501) {
       if (!isFuture(dl)) continue;
