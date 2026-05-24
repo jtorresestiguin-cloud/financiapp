@@ -158,11 +158,15 @@ function mapTopicDetail(json) {
   return {
     id:               'eu-' + td.identifier,
     titulo:           (td.title || '').slice(0, 200),
-    organismo:        td.frameworkProgramme
-                        ? `Comisión Europea — ${td.frameworkProgramme}`
-                        : td.callTitle
-                          ? `Comisión Europea — ${td.callTitle}`
-                          : 'Comisión Europea',
+    organismo:        (() => {
+                        // frameworkProgramme puede ser string, objeto {abbreviation, description} o array
+                        const fp = td.frameworkProgramme;
+                        const fpStr = typeof fp === 'string' ? fp
+                          : fp?.description || fp?.abbreviation || (Array.isArray(fp) ? fp[0] : null);
+                        const ct = typeof td.callTitle === 'string' ? td.callTitle : null;
+                        const prog = fpStr || ct || null;
+                        return prog ? `Comisión Europea — ${prog}` : 'Comisión Europea';
+                      })(),
     ambito:           'eu',
     fuente:           'eu',
     estado,
