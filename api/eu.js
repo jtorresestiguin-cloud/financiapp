@@ -1,29 +1,63 @@
 /**
  * /api/eu.js
  *
- * Lee topic-list.html, filtra IDs 2025/2026, consulta cada topicDetails JSON
- * y devuelve SOLO convocatorias con estado Open (31094501) o Forthcoming (31094502).
- * Las cerradas (31094503) o con deadline pasado se descartan siempre.
+ * Usa la API interna del portal EU Funding & Tenders que alimenta
+ * el buscador oficial. Es la misma llamada que hace el navegador
+ * cuando filtras por "Open for submission" + "Forthcoming".
+ *
+ * Endpoint: POST https://api.tech.ec.europa.eu/search-api/prod/rest/search
+ *
+ * Devuelve las 746 convocatorias activas (443 open + 303 forthcoming)
+ * igual que muestra la página oficial.
  */
 
-const TOPIC_LIST = 'https://ec.europa.eu/info/funding-tenders/opportunities/data/topic-list.html';
-const TOPIC_BASE = 'https://ec.europa.eu/info/funding-tenders/opportunities/data/topicDetails/';
-const PORTAL_BASE = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
+const SEARCH_ENDPOINT = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search';
+const PORTAL_BASE     = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
 
+// Cabeceras que replica el navegador al usar el portal
 const HEADERS = {
-  'User-Agent':      'Mozilla/5.0 (compatible; FinanciApp/2.0; +https://financiapp-wvx2.vercel.app)',
-  'Accept':          'application/json, text/html, */*',
+  'Content-Type':    'application/json',
+  'Accept':          'application/json, text/plain, */*',
+  'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+  'Origin':          'https://ec.europa.eu',
   'Referer':         'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
 };
 
-// Códigos de estado oficiales del portal EU
-const STATUS_OPEN        = '31094501';
-const STATUS_FORTHCOMING = '31094502';
-const STATUS_CLOSED      = '31094503';
 const NOW = new Date();
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Query Elasticsearch exacta del portal ───────────────────────────────────
+// type 1 = Calls for proposals (grants)
+// type 2 = Prizes
+// type 8 = Innovation procurement
+// status 31094501 = Open for submission
+// status 31094502 = Forthcoming
+function buildQuery(pageNumber = 1, pageSize = 50) {
+  return {
+    apiKey:     'SEDIA',
+    text:       '',
+    pageSize:   String(pageSize),
+    pageNumber: String(pageNumber),
+    sortBy:     'deadlineDate',
+    orderBy:    'ASC',
+    query: JSON.stringify({
+      bool: {
+        must: [
+          {
+            terms: {
+              type: ['1', '2', '8'],
+            },
+          },
+          {
+            terms: {
+              status: ['31094501', '31094502'],
+            },
+          },
+        ],
+      },
+    }),
+  };
+}
 
 function stripHtml(s) {
   return (s || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#\d]+;/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -47,104 +81,84 @@ function inferirBenef(tags, title) {
   return 'Empresa / Universidad / Entidad pública';
 }
 
-// ─── Filtro de estado — ÚNICA función que decide si incluir o descartar ───────
-function resolverEstado(detail) {
-  const d = detail?.topicDetails || detail?.details || detail || {};
+function mapHit(hit) {
+  // La API devuelve los datos en _source o directamente en el objeto
+  const s = hit._source || hit.fields || hit || {};
 
-  // El portal devuelve el código como número o string
-  const statusCode = String(d.status || d.topicStatus || d.statusCode || '').trim();
+  const statusCode = String(s.status || '').trim();
+  let estado = 'Abierta';
+  if (statusCode === '31094502') estado = 'Próxima';
 
-  // Descartar explícitamente cerradas
-  if (statusCode === STATUS_CLOSED || statusCode === '3') return null;
-
-  // Comprobar también por texto por si la API lo devuelve así
-  const statusText = statusCode.toLowerCase();
-  if (statusText === 'closed' || statusText === 'cerrada') return null;
-
-  // Comprobar deadline: si ya pasó, descartar aunque el código diga "open"
-  const deadlineRaw = d.deadlineDate || d.deadline || d.submissionDeadline || null;
-  if (deadlineRaw) {
+  // Doble comprobación: si el deadline ya pasó, descartar
+  const deadline = s.deadlineDate || s.deadline || null;
+  if (estado === 'Abierta' && deadline) {
     try {
-      const dl = new Date(deadlineRaw);
-      if (!isNaN(dl) && dl < NOW) return null; // caducada
+      if (new Date(deadline) < NOW) return null;
     } catch {}
   }
 
-  // Determinar estado normalizado
-  if (statusCode === STATUS_FORTHCOMING || statusText === 'forthcoming') return 'Próxima';
-  return 'Abierta';
-}
-
-// ─── Mapper ───────────────────────────────────────────────────────────────────
-function mapTopic(id, detail) {
-  const estado = resolverEstado(detail);
-  if (!estado) return null; // descartar cerradas/caducadas
-
-  const d = detail?.topicDetails || detail?.details || detail || {};
-
-  const title    = (d.title || d.topicTitle || id).slice(0, 200);
-  const deadline = d.deadlineDate || d.deadline || d.submissionDeadline || null;
-  const budget   = d.budgetTopicAction || d.budget || d.totalBudget || null;
-  const prog     = d.programmeName || d.callTitle || d.frameworkProgramme || '';
-  const desc     = stripHtml(d.description || d.objective || d.topicDescription || '');
-  const pubDate  = d.openingDate || d.startDate || d.publicationDate || null;
-  const tags     = d.tags || d.keywords || [];
+  const id    = s.identifier || s.topicIdentifier || s.id || '';
+  const title = s.title || s.topicTitle || id || 'Convocatoria EU';
+  const prog  = s.programmeName || s.frameworkProgramme || s.callTitle || '';
+  const desc  = stripHtml(s.description || s.objective || s.topicDescription || '');
+  const tags  = s.tags || s.keywords || s.crossCuttingPriorities || [];
 
   return {
-    id:               'eu-' + id,
-    titulo:           title,
+    id:               'eu-' + (id || Math.random().toString(36).slice(2)),
+    titulo:           title.slice(0, 200),
     organismo:        prog ? `Comisión Europea — ${prog}` : 'Comisión Europea',
     ambito:           'eu',
     fuente:           'eu',
     estado,
     beneficiario:     inferirBenef(tags, title),
-    importe:          fmtImporte(budget),
+    importe:          fmtImporte(s.budgetTopicAction || s.budget || s.totalBudget),
     cierre:           deadline,
     descripcion:      desc.slice(0, 500),
-    enlace:           PORTAL_BASE + id.toLowerCase(),
-    fechaPublicacion: pubDate,
-    referencia:       id.toUpperCase(),
+    enlace:           id
+                        ? PORTAL_BASE + id.toLowerCase()
+                        : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals',
+    fechaPublicacion: s.startDate || s.openingDate || s.publicationDate || null,
+    referencia:       id.toUpperCase() || null,
   };
 }
 
-// ─── Fetch con timeout ────────────────────────────────────────────────────────
-async function fetchTopicDetail(id) {
-  const url  = TOPIC_BASE + id.toLowerCase() + '.json';
-  const ctrl = new AbortController();
-  const t    = setTimeout(() => ctrl.abort(), 6000);
+// Obtiene una página de resultados
+async function fetchPage(pageNumber, pageSize = 50) {
+  const ctrl    = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 9000);
   try {
-    const r = await fetch(url, { headers: HEADERS, signal: ctrl.signal });
-    clearTimeout(t);
-    if (!r.ok) return null;
-    return await r.json();
-  } catch {
-    clearTimeout(t);
-    return null;
+    const r = await fetch(SEARCH_ENDPOINT, {
+      method:  'POST',
+      headers: HEADERS,
+      body:    JSON.stringify(buildQuery(pageNumber, pageSize)),
+      signal:  ctrl.signal,
+    });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const json = await r.json();
+
+    // Extraer hits según la estructura de respuesta
+    const hits =
+      json?.hits?.hits ||
+      json?.results ||
+      json?.data?.results ||
+      json?.topicResultDto?.topics ||
+      (Array.isArray(json) ? json : []);
+
+    const total =
+      json?.hits?.total?.value ||
+      json?.hits?.total ||
+      json?.total ||
+      json?.topicResultDto?.totalCount ||
+      hits.length;
+
+    return { hits, total: Number(total) || hits.length };
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
   }
 }
 
-// ─── Procesado en lotes con concurrencia controlada ───────────────────────────
-async function fetchBatch(ids, concurrency = 10) {
-  const results = [];
-  for (let i = 0; i < ids.length; i += concurrency) {
-    const batch   = ids.slice(i, i + concurrency);
-    const settled = await Promise.allSettled(
-      batch.map(async id => {
-        const detail = await fetchTopicDetail(id);
-        if (!detail) return null;
-        return mapTopic(id, detail);
-      })
-    );
-    results.push(
-      ...settled
-        .map(r => (r.status === 'fulfilled' ? r.value : null))
-        .filter(Boolean)
-    );
-  }
-  return results;
-}
-
-// ─── Handler principal ────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -154,57 +168,35 @@ module.exports = async function handler(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  // Cache 30 min — los datos del portal se actualizan varias veces al día
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
 
   try {
-    // Paso 1: obtener lista completa de IDs
-    const listCtrl    = new AbortController();
-    const listTimeout = setTimeout(() => listCtrl.abort(), 10000);
-    const listResp    = await fetch(TOPIC_LIST, {
-      headers: { ...HEADERS, Accept: 'text/html' },
-      signal:  listCtrl.signal,
-    });
-    clearTimeout(listTimeout);
-    if (!listResp.ok) throw new Error(`topic-list HTTP ${listResp.status}`);
+    // Página 1: obtener los primeros 50 resultados y el total real
+    const page1 = await fetchPage(1, 50);
+    const totalPortal = page1.total;
+    let allHits = [...page1.hits];
 
-    const html   = await listResp.text();
-    const allIds = [];
-    const re     = /topic-details\/([\w-]+)/gi;
-    let m;
-    while ((m = re.exec(html)) !== null) allIds.push(m[1]);
-    if (!allIds.length) throw new Error('No se encontraron IDs en topic-list.html');
+    // Calcular cuántas páginas más necesitamos (máx 3 páginas = 150 resultados)
+    // para no superar el timeout de Vercel de 10s
+    const maxPages   = 3;
+    const totalPages = Math.min(maxPages, Math.ceil(totalPortal / 50));
 
-    // Paso 2: filtrar IDs con año actual o siguiente
-    const yr1     = String(NOW.getFullYear());      // 2026
-    const yr2     = String(NOW.getFullYear() - 1);  // 2025 (pueden aún estar abiertas)
-    const yr3     = String(NOW.getFullYear() + 1);  // 2027 (forthcoming)
-
-    const recentIds = allIds.filter(id => {
-      const l = id.toLowerCase();
-      return l.includes(yr1) || l.includes(yr2) || l.includes(yr3);
-    });
-
-    // Si hay pocos, ampliar la búsqueda
-    const idsToFetch = recentIds.length >= 5 ? recentIds : allIds.filter(id =>
-      id.toLowerCase().includes('2024') || id.toLowerCase().includes('2025') ||
-      id.toLowerCase().includes('2026') || id.toLowerCase().includes('2027')
-    );
-
-    // Paso 3: consultar detalles — procesar hasta 80 IDs dentro del timeout de Vercel
-    const sample = idsToFetch.slice(0, 80);
-    const data   = await fetchBatch(sample, 10);
-
-    if (!data.length) {
-      return res.status(200).json({
-        ok:          true,
-        fuente:      'eu',
-        total:       0,
-        advertencia: 'No se encontraron convocatorias abiertas o próximas para los años ' + [yr2, yr1, yr3].join('/'),
-        data:        [],
+    if (totalPages > 1) {
+      const pagePromises = [];
+      for (let p = 2; p <= totalPages; p++) {
+        pagePromises.push(fetchPage(p, 50));
+      }
+      const morePages = await Promise.allSettled(pagePromises);
+      morePages.forEach(r => {
+        if (r.status === 'fulfilled') allHits.push(...r.value.hits);
       });
     }
 
-    // Paso 4: ordenar — Abiertas primero, luego Próximas; dentro de cada grupo por deadline ascendente
+    // Mapear y filtrar
+    const data = allHits.map(mapHit).filter(Boolean);
+
+    // Ordenar: Abiertas primero por deadline ASC, luego Próximas por fecha apertura ASC
     data.sort((a, b) => {
       if (a.estado !== b.estado) return a.estado === 'Abierta' ? -1 : 1;
       if (!a.cierre && !b.cierre) return 0;
@@ -214,15 +206,16 @@ module.exports = async function handler(req, res) {
     });
 
     return res.status(200).json({
-      ok:     true,
-      fuente: 'eu',
-      via:    'topicDetails JSON (filtrado por estado y deadline)',
-      total:  data.length,
+      ok:             true,
+      fuente:         'eu',
+      via:            'search-api',
+      total_portal:   totalPortal,   // total real según el portal (746)
+      total:          data.length,   // los que hemos traído (hasta 150)
       data,
     });
 
   } catch (err) {
-    console.error('EU handler error:', err.message);
+    console.error('EU search-api error:', err.message);
     return res.status(500).json({ ok: false, error: err.message });
   }
 };
