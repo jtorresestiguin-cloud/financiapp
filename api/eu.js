@@ -1,53 +1,35 @@
 /**
  * /api/eu.js
  *
- * Implementación exacta según documentación oficial EU F&T Portal APIs
- * https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/apis
+ * Documentación oficial:
+ * POST https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***
+ * body: form-data con query (JSON), languages, pageSize, pageNumber
  *
- * Endpoint correcto:
- *   POST https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***
- *
- * - apiKey y text van en la QUERY STRING de la URL
- * - query va en el FORM-DATA del body (multipart/form-data o x-www-form-urlencoded)
- * - La respuesta tiene estructura: { totalResults, results: [...] }
- * - Cada resultado tiene sus campos en metadata: {}
- *
- * Filtramos:
- *   type: 1 (grants/calls for proposals), 2 (prizes), 8 (innovation procurement)
- *   status: 31094501 (Open) + 31094502 (Forthcoming)
- *   languages: ["en"] para evitar duplicados multilingües (nota de la documentación)
+ * La respuesta tiene: { totalResults, results: [ { metadata: {}, content, ... } ] }
  */
 
-const API_URL = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***';
+const API_URL     = 'https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA&text=***';
 const PORTAL_BASE = 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/';
-const NOW = new Date();
+const NOW         = new Date();
 
-// Query exacta según documentación — grants + prizes open/forthcoming
-const QUERY = JSON.stringify({
+// Query filtrada: solo grants (1,2,8) open+forthcoming
+const QUERY_GRANTS = JSON.stringify({
   bool: {
     must: [
-      {
-        terms: {
-          type: ['1', '2', '8'],
-        },
-      },
-      {
-        terms: {
-          status: ['31094501', '31094502'],
-        },
-      },
+      { terms: { type:   ['1', '2', '8'] } },
+      { terms: { status: ['31094501', '31094502'] } },
     ],
   },
 });
 
-function buildFormData(pageNumber = 1, pageSize = 50) {
+function buildBody(pageNumber = 1, pageSize = 50) {
   const fd = new URLSearchParams();
-  fd.append('query',     QUERY);
-  fd.append('languages', '["en"]');  // evitar duplicados multilingües
+  fd.append('query',      QUERY_GRANTS);
+  fd.append('languages',  '["en"]');
   fd.append('pageNumber', String(pageNumber));
   fd.append('pageSize',   String(pageSize));
-  fd.append('sortBy',    'deadlineDate');
-  fd.append('orderBy',   'ASC');
+  fd.append('sortBy',     'deadlineDate');
+  fd.append('orderBy',    'ASC');
   return fd.toString();
 }
 
@@ -55,93 +37,118 @@ function stripHtml(s) {
   return (s || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#\d]+;/gi, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function fmtImporte(val) {
-  if (!val) return null;
-  const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+function fmtImporte(v) {
+  if (!v) return null;
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
   if (isNaN(n) || n === 0) return null;
   if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000)     return `€${Math.round(n / 1_000)}K`;
   return `€${Math.round(n).toLocaleString('es-ES')}`;
 }
 
+function first(f) {
+  if (!f) return null;
+  if (Array.isArray(f)) return f[0] ?? null;
+  return f;
+}
+
 function inferirBenef(tags, title) {
   const t = ([...(Array.isArray(tags) ? tags : []), title || '']).join(' ').toLowerCase();
-  if (t.includes('sme') || t.includes('enterprise') || t.includes('startup') || t.includes('industry')) return 'Empresa';
+  if (t.includes('sme') || t.includes('enterprise') || t.includes('startup'))  return 'Empresa';
   if (t.includes('ngo') || t.includes('civil society') || t.includes('non-profit')) return 'ONG / Tercer sector';
   if (t.includes('research') || t.includes('university') || t.includes('academic')) return 'Universidad / Investigación';
   if (t.includes('public') || t.includes('authority') || t.includes('municipality')) return 'Entidad pública';
   return 'Empresa / Universidad / Entidad pública';
 }
 
-// Extrae el primer valor de un campo que puede ser array o valor directo
-function val(field) {
-  if (!field) return null;
-  if (Array.isArray(field)) return field[0] || null;
-  return field;
-}
-
 function mapResult(item) {
-  // Según la documentación, los campos están en metadata{}
+  // La API devuelve los campos en item.metadata (como arrays) o directamente en item
   const md = item.metadata || {};
 
-  const statusArr  = md.status        || [];
-  const statusCode = String(val(statusArr) || item.status || '').trim();
+  // ── Estado ────────────────────────────────────────────────────────────────
+  // status puede estar en metadata.status[] o en item directo
+  const statusRaw  = first(md.status) ?? first(item.status) ?? '';
+  const statusCode = String(statusRaw).trim();
 
-  // Solo open (31094501) y forthcoming (31094502)
-  if (statusCode === '31094503') return null;
+  // Descartar cerradas
+  if (statusCode === '31094503' || statusCode.toLowerCase() === 'closed') return null;
 
-  let estado = 'Abierta';
-  if (statusCode === '31094502') estado = 'Próxima';
+  let estado = statusCode === '31094502' ? 'Próxima' : 'Abierta';
 
-  // Deadline — descartar si ya pasó (solo para abiertas)
-  const deadlineArr = md.deadlineDate || md.deadline || [];
-  const deadline    = val(deadlineArr);
+  // ── Deadline ──────────────────────────────────────────────────────────────
+  const deadline = first(md.deadlineDate) ?? first(md.deadline) ?? null;
   if (estado === 'Abierta' && deadline) {
     try { if (new Date(deadline) < NOW) return null; } catch {}
   }
 
-  // Identificador y título
-  const identifierArr = md.identifier || md.topicIdentifier || [];
-  const identifier    = val(identifierArr) || item.reference || '';
-  const titleArr      = md.title || md.topicTitle || [];
-  const title         = val(titleArr) || item.title || item.content || identifier || 'Convocatoria EU';
+  // ── Identificador ─────────────────────────────────────────────────────────
+  // Puede estar en metadata.identifier[], metadata.callIdentifier[], o item.reference
+  const identifier =
+    first(md.identifier) ??
+    first(md.callIdentifier) ??
+    first(md.topicIdentifier) ??
+    item.reference ??
+    '';
 
-  // Programa
-  const progArr = md.programmeName || md.frameworkProgramme || md.programmes || [];
-  const prog    = val(progArr) || '';
+  // ── Título ────────────────────────────────────────────────────────────────
+  // Puede estar en metadata.title[], item.title, o item.content
+  const title =
+    first(md.title) ??
+    first(md.topicTitle) ??
+    item.title ??
+    item.content ??
+    identifier ??
+    '';
 
-  // Descripción — puede estar en content o en metadata
+  if (!title) return null;
+
+  // ── Programa ──────────────────────────────────────────────────────────────
+  const prog =
+    first(md.programmeName) ??
+    first(md.programmes) ??
+    first(md.frameworkProgramme) ??
+    first(md.callTitle) ??
+    '';
+
+  // ── Descripción ───────────────────────────────────────────────────────────
   const desc = stripHtml(
-    item.content ||
-    val(md.description) ||
-    val(md.objective) ||
-    val(md.topicDescription) ||
+    item.content ??
+    first(md.description) ??
+    first(md.objective) ??
+    first(md.topicDescription) ??
     ''
   );
 
-  // Presupuesto
-  const budgetArr = md.budgetTopicAction || md.budget || md.totalBudget || md.euContributionAmount || [];
-  const budget    = val(budgetArr);
+  // ── Presupuesto ───────────────────────────────────────────────────────────
+  const budget =
+    first(md.budgetTopicAction) ??
+    first(md.budget) ??
+    first(md.totalBudget) ??
+    first(md.euContributionAmount) ??
+    first(md.overallBudget) ??
+    null;
 
-  // Fecha publicación/apertura
-  const pubArr = md.startDate || md.openingDate || md.publicationDate || md.esDA_IngestDate || [];
-  const pubDate = val(pubArr);
+  // ── Fecha publicación ─────────────────────────────────────────────────────
+  const pubDate =
+    first(md.startDate) ??
+    first(md.openingDate) ??
+    first(md.publicationDate) ??
+    null;
 
-  // Tags/keywords
-  const tags = md.keywords || md.tags || md.crossCuttingPriorities || [];
+  // ── URL ───────────────────────────────────────────────────────────────────
+  const urlRaw = first(md.url) ?? first(md.esST_URL) ?? '';
+  const enlace = (urlRaw && urlRaw !== 'NA')
+    ? urlRaw.replace(/^uri -> /, '').trim()
+    : identifier
+      ? PORTAL_BASE + identifier.toLowerCase()
+      : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals';
 
-  // URL directa
-  const urlArr  = md.url || md.esST_URL || [];
-  const urlRaw  = val(urlArr) || '';
-  const enlace  = (urlRaw && urlRaw !== 'NA')
-    ? urlRaw.replace(/^uri -> /, '')
-    : (identifier ? PORTAL_BASE + identifier.toLowerCase() : 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals');
-
-  if (!title || title === identifier) return null;
+  // ── Tags ──────────────────────────────────────────────────────────────────
+  const tags = md.keywords ?? md.tags ?? md.crossCuttingPriorities ?? [];
 
   return {
     id:               'eu-' + (identifier || item.reference || Math.random().toString(36).slice(2)),
-    titulo:           title.slice(0, 200),
+    titulo:           String(title).slice(0, 200),
     organismo:        prog ? `Comisión Europea — ${prog}` : 'Comisión Europea',
     ambito:           'eu',
     fuente:           'eu',
@@ -152,7 +159,7 @@ function mapResult(item) {
     descripcion:      desc.slice(0, 500),
     enlace,
     fechaPublicacion: pubDate,
-    referencia:       identifier ? identifier.toUpperCase() : null,
+    referencia:       identifier ? String(identifier).toUpperCase() : null,
   };
 }
 
@@ -168,19 +175,21 @@ async function fetchPage(pageNumber, pageSize = 50) {
         'User-Agent':      'Mozilla/5.0 (compatible; FinanciApp/2.0)',
         'Accept-Language': 'en',
       },
-      body:   buildFormData(pageNumber, pageSize),
+      body:   buildBody(pageNumber, pageSize),
       signal: ctrl.signal,
     });
     clearTimeout(timeout);
     if (!r.ok) {
       const txt = await r.text().catch(() => '');
-      throw new Error(`HTTP ${r.status}: ${txt.slice(0, 150)}`);
+      throw new Error(`HTTP ${r.status}: ${txt.slice(0, 200)}`);
     }
     const json = await r.json();
-    // Según documentación: { totalResults, results: [...] }
-    const results      = json.results || json.hits?.hits || [];
-    const totalResults = json.totalResults || json.hits?.total?.value || results.length;
-    return { results, total: Number(totalResults) };
+
+    // Estructura documentada: { totalResults, results: [...] }
+    const results = json.results ?? json.hits?.hits ?? [];
+    const total   = Number(json.totalResults ?? json.hits?.total?.value ?? results.length);
+
+    return { results, total, raw_sample: results[0] ?? null };
   } catch (e) {
     clearTimeout(timeout);
     throw e;
@@ -196,42 +205,33 @@ module.exports = async function handler(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'no-store'); // sin cache mientras depuramos
 
   try {
-    // Página 1 — obtener datos y total real
-    const page1      = await fetchPage(1, 50);
+    const page1       = await fetchPage(1, 10); // solo 10 para diagnóstico rápido
     const totalPortal = page1.total;
-    let allResults   = [...page1.results];
-
-    // Páginas adicionales en paralelo (máx 150 resultados dentro del timeout de Vercel)
-    const totalPages = Math.min(3, Math.ceil(totalPortal / 50));
-    if (totalPages > 1) {
-      const rest = await Promise.allSettled(
-        Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 2, 50))
-      );
-      rest.forEach(r => {
-        if (r.status === 'fulfilled') allResults.push(...r.value.results);
-      });
-    }
+    const allResults  = page1.results;
 
     const data = allResults.map(mapResult).filter(Boolean);
-
-    // Ordenar: Abiertas primero por deadline ASC, luego Próximas
-    data.sort((a, b) => {
-      if (a.estado !== b.estado) return a.estado === 'Abierta' ? -1 : 1;
-      if (!a.cierre && !b.cierre) return 0;
-      if (!a.cierre) return 1;
-      if (!b.cierre) return -1;
-      return new Date(a.cierre) - new Date(b.cierre);
-    });
 
     return res.status(200).json({
       ok:           true,
       fuente:       'eu',
-      via:          'SEDIA search-api (form-data)',
       total_portal: totalPortal,
       total:        data.length,
+      raw_descartados: allResults.length - data.length,
+      // Muestra el primer resultado crudo para diagnóstico
+      debug_primer_resultado: page1.raw_sample
+        ? {
+            keys_raiz:      Object.keys(page1.raw_sample),
+            keys_metadata:  Object.keys(page1.raw_sample.metadata || {}),
+            status_val:     page1.raw_sample.metadata?.status,
+            title_val:      page1.raw_sample.metadata?.title ?? page1.raw_sample.title,
+            identifier_val: page1.raw_sample.metadata?.identifier,
+            deadline_val:   page1.raw_sample.metadata?.deadlineDate,
+            type_val:       page1.raw_sample.metadata?.type,
+          }
+        : null,
       data,
     });
 
