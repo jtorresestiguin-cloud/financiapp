@@ -130,6 +130,7 @@ const ACTIVE_IDS = [
   'ERASMUS-EDU-2026-PI-LEA-INNO-TCA',
   'ERASMUS-YOUTH-2026-SCP-SCE',
   'ERASMUS-SPORT-2026-SNCESE',
+  'ERASMUS-EDU-2026-POL-EXP-SSEF',
 
   // ── CERV 2026 ────────────────────────────────────────────────────────────
   'CERV-2026-DAPHNE',
