@@ -154,6 +154,7 @@ const ACTIVE_IDS = [
   'CEF-T-2026-AFIF-RAILS',
   'CEF-T-2026-MULTIMODAL',
   'CEF-E-2026-PCI',
+  'CEF-E-2026-PCI-PMI-WORKS',
 
   // ── SMP / COSME 2026 ─────────────────────────────────────────────────────
   'SMP-COSME-2026-CLUSTER-EXCELLENCE',
