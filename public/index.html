@@ -1,574 +1,1525 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FinanciApp — Buscador de financiación pública</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --ink:#1a1a18; --ink-soft:#5a5a55; --ink-muted:#9a9a92;
-    --bg:#f5f3ee; --bg-card:#ffffff;
-    --border:rgba(26,26,24,.10); --border-md:rgba(26,26,24,.18);
-    --eu:#1a4fa0; --eu-bg:#e8f0fc;
-    --nac:#1a6b3a; --nac-bg:#e6f4eb;
-    --loc:#8a4a00; --loc-bg:#fdf0e0;
-    --open:#146b38; --open-bg:#e4f5ec;
-    --soon:#8a5a00; --soon-bg:#fef3d9;
-    --closed:#6b1414; --closed-bg:#fde8e8;
-    --accent:#c8602a;
-    --r:10px; --rlg:16px;
-    --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
-  }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanciApp — Buscador de financiación pública · NTT DATA</title>
+  <meta name="description" content="Encuentra la financiación pública que tu entidad necesita. Convocatorias de la BDNS y Funding & Tenders EU, filtradas por tu perfil." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.9.0/dist/tabler-icons.min.css" />
+  <style>
+    /* ── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f0f6fb;
+      color: #0d1f2d;
+      min-height: 100vh;
+    }
 
-  /* NAV */
-  nav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
-  .logo{font-family:'Fraunces',serif;font-size:20px;font-weight:500}
-  .logo span{color:var(--accent)}
-  .nav-links{display:flex;gap:1.5rem;align-items:center}
-  .nav-links a{font-size:13px;color:var(--ink-soft);text-decoration:none;transition:color .15s}
-  .nav-links a:hover{color:var(--ink)}
-  .nav-btn{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:opacity .15s}
-  .nav-btn:hover{opacity:.82}
+    /* ── CSS VARIABLES ────────────────────────────────────────── */
+    :root {
+      --ntt: #0085CA;
+      --ntt-dark: #005f99;
+      --ntt-darker: #003f6e;
+      --ntt-light: #dff0fa;
+      --ntt-pale: #f0f8fd;
+      --surface: #ffffff;
+      --surface-2: #f7fafc;
+      --surface-3: #eef4f9;
+      --border: rgba(0,133,202,0.15);
+      --border-strong: rgba(0,133,202,0.3);
+      --text-primary: #0d1f2d;
+      --text-secondary: #4a6278;
+      --text-muted: #8ea5b8;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 4px rgba(0,85,140,0.08);
+      --shadow-md: 0 4px 20px rgba(0,85,140,0.12);
+      --shadow-lg: 0 8px 40px rgba(0,85,140,0.16);
+      --transition: 0.18s ease;
+    }
 
-  /* HERO */
-  .hero{padding:4rem 2rem 3rem;text-align:center;max-width:760px;margin:0 auto}
-  .eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:rgba(200,96,42,.08);padding:4px 12px;border-radius:20px;margin-bottom:1.25rem}
-  .hero h1{font-family:'Fraunces',serif;font-size:clamp(30px,5vw,50px);font-weight:300;line-height:1.15;margin-bottom:1rem}
-  .hero h1 em{font-style:italic;color:var(--accent)}
-  .hero p{font-size:16px;color:var(--ink-soft);line-height:1.7;margin-bottom:2rem}
-  .stats{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
-  .stat-num{font-family:'Fraunces',serif;font-size:28px;font-weight:400;display:block}
-  .stat-lbl{font-size:12px;color:var(--ink-muted)}
+    /* ── LAYOUT ───────────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
 
-  /* SEARCH */
-  .search-wrap{max-width:880px;margin:0 auto;padding:1.5rem 1.5rem 2.5rem}
-  .search-box{background:var(--bg-card);border-radius:var(--rlg);border:1px solid var(--border);padding:1.25rem;box-shadow:var(--shadow)}
-  .search-row{display:flex;gap:8px;margin-bottom:1rem}
-  .sinput{flex:1;height:44px;border:1px solid var(--border-md);border-radius:8px;padding:0 14px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--bg);outline:none;transition:border-color .15s}
-  .sinput:focus{border-color:var(--accent)}
-  .sbtn{height:44px;padding:0 20px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s;display:flex;align-items:center;gap:6px}
-  .sbtn:hover{opacity:.82}
-  .filters{display:flex;gap:8px;flex-wrap:wrap}
-  .fsel{height:36px;border:1px solid var(--border-md);border-radius:8px;padding:0 12px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--bg);cursor:pointer;outline:none;transition:border-color .15s}
-  .fsel:focus{border-color:var(--accent)}
+    /* ── HEADER ───────────────────────────────────────────────── */
+    .site-header {
+      background: var(--ntt);
+      box-shadow: 0 2px 16px rgba(0,85,140,0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-svg { width: 30px; height: 30px; flex-shrink: 0; }
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+    .logo-brand { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+    .logo-tagline { font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 0.06em; text-transform: uppercase; }
+    .header-nav { display: flex; gap: 0.25rem; }
+    .nav-btn {
+      padding: 6px 14px;
+      background: rgba(255,255,255,0.12);
+      border: 0.5px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.9);
+      cursor: pointer;
+      text-decoration: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: background var(--transition);
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.22); }
+    .nav-btn.active { background: rgba(255,255,255,0.25); color: #fff; font-weight: 500; }
 
-  /* MAIN */
-  .main{max-width:880px;margin:0 auto;padding:0 1.5rem 4rem}
-  .slabel{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-muted);margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between}
-  .slabel small{font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-muted)}
+    /* ── HERO ─────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #003f6e 0%, #0055a0 50%, #0085CA 100%);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: 30%;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+    }
+    .hero-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.12);
+      border: 0.5px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 1rem;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(20px, 3vw, 26px);
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.3;
+      margin-bottom: 0.625rem;
+    }
+    .hero h1 em { color: #7dd4fa; font-style: normal; }
+    .hero p {
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.65;
+      max-width: 520px;
+      margin-bottom: 1.5rem;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .hero-stat {
+      background: rgba(255,255,255,0.1);
+      border: 0.5px solid rgba(255,255,255,0.18);
+      border-radius: var(--radius);
+      padding: 0.625rem 1.125rem;
+    }
+    .hero-stat .val {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .hero-stat .lbl {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 1px;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff;
+      color: var(--ntt-dark);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all var(--transition);
+    }
+    .hero-cta:hover { background: #f0f8ff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
 
-  /* STATUS */
-  .status-bar{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--ink-soft)}
-  .dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
-  .dot.loading{background:var(--accent);animation:pulse 1s ease-in-out infinite}
-  .dot.error{background:#ef4444}
-  .dot.warn{background:#f59e0b}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    /* ── CARD SHELL ──────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
 
-  /* SOURCE TABS */
-  .tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
-  .tab{height:32px;padding:0 14px;border:1px solid var(--border-md);border-radius:20px;background:var(--bg-card);font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:5px}
-  .tab:hover{border-color:var(--ink);color:var(--ink)}
-  .tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-  .tab .cnt{background:rgba(255,255,255,.25);border-radius:10px;padding:1px 6px;font-size:11px}
-  .tab:not(.active) .cnt{background:var(--bg);color:var(--ink-muted)}
-  .tab .err{font-size:11px;color:#d97706;margin-left:2px}
+    /* ── PROGRESS BAR ────────────────────────────────────────── */
+    .progress-wrap {
+      background: var(--ntt-pale);
+      border-bottom: 0.5px solid var(--border);
+      padding: 1rem 1.5rem 0.875rem;
+    }
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .ps {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+    .ps-dot {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      border: 1.5px solid #c4d8e8;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: all 0.25s;
+    }
+    .ps-dot.done { background: var(--ntt); border-color: var(--ntt); color: #fff; }
+    .ps-dot.active {
+      background: var(--ntt);
+      border-color: var(--ntt);
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(0,133,202,0.18);
+    }
+    .ps-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      display: none;
+    }
+    .ps-label.active { display: block; color: var(--ntt-dark); font-weight: 500; }
+    .ps-line {
+      flex: 1;
+      height: 1.5px;
+      background: #c4d8e8;
+      margin: 0 4px;
+      transition: background 0.25s;
+    }
+    .ps-line.done { background: var(--ntt); }
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .progress-label strong { color: var(--text-secondary); }
 
-  /* CARDS */
-  .cards{display:flex;flex-direction:column;gap:10px}
-  .card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.125rem 1.25rem;display:flex;gap:14px;cursor:pointer;transition:border-color .15s,transform .1s}
-  .card:hover{border-color:var(--border-md);transform:translateY(-1px)}
-  .cicon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:-.5px}
-  .i-eu{background:var(--eu-bg);color:var(--eu)}
-  .i-nac{background:var(--nac-bg);color:var(--nac)}
-  .i-loc{background:var(--loc-bg);color:var(--loc)}
-  .cbody{flex:1;min-width:0}
-  .cheader{display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;flex-wrap:wrap}
-  .ctitle{font-size:14px;font-weight:500;color:var(--ink);line-height:1.4;flex:1}
-  .badges{display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
-  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
-  .b-eu{background:var(--eu-bg);color:var(--eu)}
-  .b-nac{background:var(--nac-bg);color:var(--nac)}
-  .b-loc{background:var(--loc-bg);color:var(--loc)}
-  .b-open{background:var(--open-bg);color:var(--open)}
-  .b-soon{background:var(--soon-bg);color:var(--soon)}
-  .b-closed{background:var(--closed-bg);color:var(--closed)}
-  .cmeta{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-muted);margin-top:4px}
-  .cright{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-  .camount{font-family:'Fraunces',serif;font-size:15px;font-weight:400}
-  .camount-lbl{font-size:11px;color:var(--ink-muted)}
-  .clink{font-size:11px;color:var(--accent);text-decoration:none;margin-top:2px}
-  .clink:hover{text-decoration:underline}
-  .empty{text-align:center;padding:3rem 1rem;color:var(--ink-muted);font-size:14px;background:var(--bg-card);border-radius:var(--rlg);border:1px solid var(--border)}
-  .empty strong{display:block;font-size:16px;color:var(--ink-soft);margin-bottom:.5rem}
-  .skel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.125rem 1.25rem;margin-bottom:10px}
-  .skel-l{height:12px;border-radius:6px;background:var(--bg);animation:shimmer 1.4s ease-in-out infinite}
-  @keyframes shimmer{0%,100%{opacity:1}50%{opacity:.5}}
+    /* ── STEP CONTENT ────────────────────────────────────────── */
+    .steps-wrap { padding: 1.75rem 1.5rem; min-height: 400px; display: flex; flex-direction: column; }
+    .step { display: none; flex-direction: column; flex: 1; animation: fadeIn 0.2s ease; }
+    .step.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-  /* MODAL */
-  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
-  .overlay.open{display:flex}
-  .modal{background:var(--bg-card);border-radius:var(--rlg);max-width:640px;width:100%;max-height:90vh;overflow-y:auto;padding:2rem;position:relative}
-  .modal-x{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-muted);line-height:1;font-family:sans-serif}
-  .modal-x:hover{color:var(--ink)}
-  .modal h2{font-family:'Fraunces',serif;font-size:20px;font-weight:400;margin-bottom:1rem;line-height:1.3}
-  .mrow{display:flex;gap:8px;font-size:13px;margin-bottom:6px}
-  .mrow .lbl{color:var(--ink-muted);min-width:110px;flex-shrink:0}
-  .mrow .val{color:var(--ink);font-weight:500}
-  .mdesc{font-size:14px;color:var(--ink-soft);line-height:1.7;border-top:1px solid var(--border);padding-top:1rem;margin:1rem 0}
-  .mactions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem}
-  .btn-p{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}
-  .btn-p:hover{opacity:.82}
-  .btn-s{background:none;color:var(--ink);border:1px solid var(--border-md);border-radius:8px;padding:10px 20px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
-  .btn-s:hover{background:var(--bg)}
-  .xml-wrap{border-top:1px solid var(--border);padding-top:1.25rem}
-  .xml-wrap h3{font-size:13px;font-weight:500;margin-bottom:.75rem;color:var(--ink)}
-  .xml-block{background:#1e1e1e;color:#d4d4d4;font-family:'Courier New',monospace;font-size:11.5px;padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.8;white-space:pre;max-height:340px;overflow-y:auto}
-  .xt{color:#4ec9b0}.xa{color:#9cdcfe}.xv{color:#ce9178}
+    .step-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ntt);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .step-title {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    .step-hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
 
-  /* FEED / ALERTAS */
-  .infobox{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem 1.5rem;display:flex;gap:14px}
-  .iicon{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-  .alert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+    /* ── OPTION GRID ─────────────────────────────────────────── */
+    .opts {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+    .opt {
+      padding: 11px 13px;
+      border: 0.5px solid #d1e4f0;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--surface);
+      transition: all var(--transition);
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .opt:hover { border-color: var(--ntt); background: var(--ntt-pale); color: var(--ntt-dark); }
+    .opt.sel {
+      border-color: var(--ntt);
+      background: var(--ntt-light);
+      color: var(--ntt-dark);
+      font-weight: 500;
+      box-shadow: inset 0 0 0 1px rgba(0,133,202,0.2);
+    }
+    .opt i { font-size: 17px; color: var(--text-muted); flex-shrink: 0; transition: color var(--transition); }
+    .opt:hover i, .opt.sel i { color: var(--ntt); }
 
-  footer{border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:12px;color:var(--ink-muted)}
-  footer a{color:var(--ink-muted);text-decoration:none}
-  footer a:hover{color:var(--ink)}
+    /* ── FORM FIELDS ─────────────────────────────────────────── */
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+    .field-row.single { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      padding: 8px 11px;
+      border: 0.5px solid #c8dcea;
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      appearance: none;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--ntt);
+      box-shadow: 0 0 0 3px rgba(0,133,202,0.12);
+    }
+    .field textarea { resize: none; line-height: 1.55; }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a6278' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
 
-  @media(max-width:600px){
-    .search-row,.alert-grid{flex-direction:column}
-    .alert-grid{grid-template-columns:1fr}
-    .card{flex-direction:column;gap:10px}
-    .cright{text-align:left;align-items:flex-start}
-  }
-</style>
+    /* ── TRL SLIDER ──────────────────────────────────────────── */
+    .trl-block { margin-bottom: 1.25rem; }
+    .trl-block label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 8px;
+    }
+    .trl-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .trl-row input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: #c8dcea;
+      border-radius: 2px;
+      outline: none;
+    }
+    .trl-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--ntt);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,85,140,0.3);
+    }
+    .trl-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ntt);
+      min-width: 64px;
+      text-align: center;
+      background: var(--ntt-light);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: 'DM Mono', monospace;
+    }
+    .trl-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      min-height: 2.5em;
+      padding: 6px 10px;
+      background: var(--surface-3);
+      border-radius: 6px;
+      border-left: 3px solid var(--ntt-light);
+    }
+
+    /* ── PILLS ───────────────────────────────────────────────── */
+    .pills-block { margin-bottom: 1.125rem; }
+    .pills-block > label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 7px;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill {
+      padding: 5px 14px;
+      border: 0.5px solid #c8dcea;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 400;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-family: 'DM Sans', sans-serif;
+      transition: all var(--transition);
+    }
+    .pill:hover { border-color: var(--ntt); color: var(--ntt-dark); background: var(--ntt-pale); }
+    .pill.sel {
+      background: var(--ntt);
+      border-color: var(--ntt);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* ── NAV BUTTONS ─────────────────────────────────────────── */
+    .step-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      padding-top: 1.25rem;
+      border-top: 0.5px solid var(--border);
+    }
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      border: 0.5px solid #c8dcea;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text-secondary);
+      transition: all var(--transition);
+    }
+    .btn-back:hover { border-color: var(--ntt); color: var(--ntt-dark); background: var(--ntt-pale); }
+    .btn-next {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 22px;
+      background: var(--ntt);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(0,133,202,0.3);
+    }
+    .btn-next:hover { background: var(--ntt-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,133,202,0.4); }
+    .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── RESULTS ─────────────────────────────────────────────── */
+    .results-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .results-summary { font-size: 13px; color: var(--text-secondary); }
+    .results-summary strong { color: var(--text-primary); font-weight: 600; }
+    .btn-restart {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border: 0.5px solid #c8dcea;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--text-secondary);
+      transition: all var(--transition);
+    }
+    .btn-restart:hover { border-color: var(--ntt); color: var(--ntt); background: var(--ntt-pale); }
+
+    .grant-card {
+      background: var(--surface);
+      border: 0.5px solid #d1e4f0;
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .grant-card:hover { border-color: var(--ntt); box-shadow: var(--shadow-sm); }
+    .grant-card:last-child { margin-bottom: 0; }
+
+    .src-badge {
+      flex-shrink: 0;
+      width: 50px; height: 50px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.3;
+      letter-spacing: 0.03em;
+    }
+    .bdns-b { background: #dff0fa; color: #005f99; border: 0.5px solid #90d0ef; }
+    .eu-b   { background: #fff8e6; color: #7a4f00; border: 0.5px solid #f0c96d; }
+
+    .grant-main { flex: 1; min-width: 0; }
+    .grant-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .grant-org { font-size: 12px; color: var(--text-muted); margin-bottom: 7px; }
+    .grant-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 0.5px solid #d1e4f0;
+      color: var(--text-secondary);
+      background: var(--surface-3);
+    }
+    .tag-open  { background: #edf7e6; color: #2d6a1f; border-color: #a8d98a; }
+    .tag-upcoming { background: #fff8e6; color: #7a4f00; border-color: #f0c96d; }
+    .tag-match { background: var(--ntt-light); color: var(--ntt-dark); border-color: #90d0ef; font-weight: 600; }
+
+    .grant-right {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      min-width: 90px;
+    }
+    .grant-amount { font-size: 12px; font-weight: 600; color: var(--ntt-dark); text-align: right; }
+    .btn-detail {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12px;
+      color: var(--ntt);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    .btn-detail:hover { color: var(--ntt-dark); }
+    .btn-ai {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      padding: 4px 10px;
+      background: var(--ntt-light);
+      color: var(--ntt-dark);
+      border: 0.5px solid var(--border-strong);
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      transition: all var(--transition);
+    }
+    .btn-ai:hover { background: var(--ntt); color: #fff; border-color: var(--ntt); }
+
+    .results-cta {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── SECTION PAGES (Feed, Alertas) ───────────────────────── */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+    .section-header {
+      padding: 1.5rem 1.5rem 0;
+      margin-bottom: 1.25rem;
+    }
+    .section-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ntt);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .section-title { font-size: 18px; font-weight: 500; color: var(--text-primary); }
+    .section-hint { font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6; }
+    .section-body { padding: 0 1.5rem 1.5rem; }
+
+    .info-box {
+      background: var(--ntt-pale);
+      border: 0.5px solid var(--border-strong);
+      border-left: 3px solid var(--ntt);
+      border-radius: var(--radius);
+      padding: 0.875rem 1rem;
+      font-size: 13px;
+      color: var(--ntt-dark);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.6;
+    }
+    .info-box i { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 20px;
+      background: var(--ntt);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,133,202,0.3);
+      transition: all var(--transition);
+    }
+    .btn-primary:hover { background: var(--ntt-dark); transform: translateY(-1px); }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 20px;
+      background: var(--surface);
+      color: var(--text-secondary);
+      border: 0.5px solid #c8dcea;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .btn-secondary:hover { border-color: var(--ntt); color: var(--ntt-dark); background: var(--ntt-pale); }
+
+    .xml-preview {
+      background: #0d1f2d;
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 11.5px;
+      color: #7dd4fa;
+      line-height: 1.7;
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+    .xml-preview .xml-tag { color: #f472b6; }
+    .xml-preview .xml-attr { color: #fb923c; }
+    .xml-preview .xml-val { color: #a3e635; }
+    .xml-preview .xml-txt { color: #e2e8f0; }
+
+    .alert-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 520px) { .alert-form-grid { grid-template-columns: 1fr; } }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    .site-footer {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+    }
+    .footer-sources { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+    .footer-sources a { color: var(--ntt); text-decoration: none; }
+    .footer-sources a:hover { text-decoration: underline; }
+    .footer-brand { font-weight: 600; color: var(--text-secondary); }
+
+    /* ── EMPTY / LOADING ─────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    .empty-state i { font-size: 36px; display: block; margin-bottom: 0.75rem; color: var(--ntt); opacity: 0.4; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      .field-row { grid-template-columns: 1fr; }
+      .opts { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+      .grant-card { flex-wrap: wrap; }
+      .grant-right { flex-direction: row; align-items: center; min-width: unset; width: 100%; justify-content: space-between; }
+      .header-nav { display: none; }
+    }
+  </style>
 </head>
 <body>
 
-<nav>
-  <div class="logo">Financi<span>App</span></div>
-  <div class="nav-links">
-    <a href="#buscador">Convocatorias</a>
-    <a href="#feed">Feed XML</a>
-    <a href="#alertas">Alertas</a>
-    <button class="nav-btn" onclick="ir('alertas')">Registrarme</button>
-  </div>
-</nav>
-
-<div class="hero">
-  <div class="eyebrow">&#9679; Datos en tiempo real · Fuentes oficiales</div>
-  <h1>Encuentra la <em>financiación pública</em><br>que tu entidad necesita</h1>
-  <p>Convocatorias del BOE (canal Ayudas + Sección III), Comisión Europea y GVA/DOGV — consultadas directamente desde sus fuentes oficiales.</p>
-  <div class="stats">
-    <div><span class="stat-num" id="s-total">—</span><span class="stat-lbl">Convocatorias cargadas</span></div>
-    <div><span class="stat-num" id="s-open">—</span><span class="stat-lbl">Identificadas como abiertas</span></div>
-    <div><span class="stat-num" id="s-src">4</span><span class="stat-lbl">Fuentes oficiales</span></div>
-  </div>
-</div>
-
-<div class="search-wrap" id="buscador">
-  <div class="search-box">
-    <div class="search-row">
-      <input class="sinput" id="q" type="text" placeholder="Buscar por título, organismo, palabra clave…" oninput="filtrar()">
-      <button class="sbtn" onclick="cargarTodo()">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        Actualizar
-      </button>
-    </div>
-    <div class="filters">
-      <select class="fsel" id="f-ambito" onchange="filtrar()">
-        <option value="">Todos los ámbitos</option>
-        <option value="eu">Europeo</option>
-        <option value="nac">Nacional</option>
-        <option value="loc">Autonómico / Local</option>
-      </select>
-      <select class="fsel" id="f-estado" onchange="filtrar()">
-        <option value="">Todos los estados</option>
-        <option value="Abierta">Abierta</option>
-        <option value="Próxima">Próxima</option>
-        <option value="Cerrada">Cerrada</option>
-      </select>
-      <select class="fsel" id="f-benef" onchange="filtrar()">
-        <option value="">Todos los beneficiarios</option>
-        <option value="Empresa">Empresa</option>
-        <option value="ONG / Tercer sector">ONG / Tercer sector</option>
-        <option value="Entidad pública">Entidad pública</option>
-        <option value="Entidad local">Entidad local</option>
-        <option value="Universidad / Investigación">Universidad / Investigación</option>
-      </select>
-    </div>
-  </div>
-</div>
-
-<div class="main">
-
-  <div class="status-bar">
-    <div class="dot loading" id="dot"></div>
-    <span id="status">Conectando con las fuentes oficiales…</span>
-    <span style="margin-left:auto;font-size:11px;color:var(--ink-muted)" id="ts"></span>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" data-src="all" onclick="selTab('all',this)">Todas <span class="cnt" id="c-all">0</span></button>
-    <button class="tab" data-src="boe-ayudas" onclick="selTab('boe-ayudas',this)">BOE Ayudas <span class="cnt" id="c-boe-ayudas">0</span></button>
-    <button class="tab" data-src="boe-sec3" onclick="selTab('boe-sec3',this)">BOE Sec. III <span class="cnt" id="c-boe-sec3">0</span></button>
-    <button class="tab" data-src="eu" onclick="selTab('eu',this)">Europeas <span class="cnt" id="c-eu">0</span></button>
-    <button class="tab" data-src="gva" onclick="selTab('gva',this)">GVA / DOGV <span class="cnt" id="c-gva">0</span></button>
-  </div>
-
-  <div class="slabel">Convocatorias y resoluciones <small id="nres"></small></div>
-  <div class="cards" id="cards">
-    <div class="skel"><div class="skel-l" style="width:65%;margin-bottom:10px"></div><div class="skel-l" style="width:40%"></div></div>
-    <div class="skel"><div class="skel-l" style="width:78%;margin-bottom:10px"></div><div class="skel-l" style="width:32%"></div></div>
-    <div class="skel"><div class="skel-l" style="width:52%;margin-bottom:10px"></div><div class="skel-l" style="width:48%"></div></div>
-  </div>
-
-  <!-- FEED XML -->
-  <div id="feed" style="margin-top:3rem">
-    <div class="slabel">Feed XML / Atom público <small>Estándar RFC 4287 · Compatible con Make, Zapier y lectores RSS</small></div>
-    <div class="infobox">
-      <div class="iicon" style="background:#fff7ed;color:var(--accent)">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:500;margin-bottom:4px">Feed Atom con todas las convocatorias activas</div>
-        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Descarga el XML generado con los datos actuales o previsualiza la estructura antes de integrarlo en Make/Zapier.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn-p" onclick="descargarFeed()">Descargar feed.xml</button>
-          <button class="btn-s" onclick="previsualizarFeed()">Vista previa XML</button>
+  <!-- ── SITE HEADER ───────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="logo" onclick="showPage('wizard'); return false;">
+        <svg class="logo-svg" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NTT DATA logo">
+          <circle cx="15" cy="15" r="13" stroke="white" stroke-width="2.2"/>
+          <circle cx="15" cy="11" r="5" stroke="white" stroke-width="2.2"/>
+          <circle cx="15" cy="11" r="1.8" fill="white"/>
+        </svg>
+        <div class="logo-text">
+          <span class="logo-brand">NTT DATA</span>
+          <span class="logo-tagline">FinanciApp</span>
         </div>
-      </div>
+      </a>
+      <nav class="header-nav">
+        <button class="nav-btn active" id="nav-wizard" onclick="showPage('wizard')">Convocatorias</button>
+        <button class="nav-btn" id="nav-feed" onclick="showPage('feed')">Feed XML</button>
+        <button class="nav-btn" id="nav-alertas" onclick="showPage('alertas')">Alertas</button>
+      </nav>
     </div>
-  </div>
+  </header>
 
-  <!-- ALERTAS -->
-  <div id="alertas" style="margin-top:3rem">
-    <div class="slabel">Alertas personalizadas <small>Notificación por email cuando se publique una convocatoria de tu interés</small></div>
-    <div class="infobox" style="flex-direction:column;gap:1rem">
-      <div class="alert-grid">
-        <input class="sinput" id="a-nombre" placeholder="Nombre de la entidad">
-        <input class="sinput" id="a-email" type="email" placeholder="Email de contacto">
-        <select class="fsel" style="height:44px;width:100%" id="a-tipo">
-          <option value="">Tipo de entidad</option>
-          <option>Ayuntamiento</option><option>Diputación</option>
-          <option>ONG / Asociación</option><option>Empresa / Startup</option>
-          <option>Universidad / Centro de investigación</option>
-        </select>
-        <select class="fsel" style="height:44px;width:100%" id="a-ambito">
-          <option value="">Ámbito de interés</option>
-          <option>Europeo</option><option>Nacional</option>
-          <option>Comunitat Valenciana</option><option>Todos los ámbitos</option>
-        </select>
+  <!-- ── PAGE WRAP ─────────────────────────────────────────── -->
+  <main class="page-wrap">
+
+    <!-- HERO -->
+    <div class="hero" id="hero-block">
+      <div class="hero-live"><span class="live-dot"></span>Datos en tiempo real · Fuentes oficiales</div>
+      <h1>Encuentra la <em>financiación pública</em><br>que tu entidad necesita</h1>
+      <p>Convocatorias de la BDNS (Base de Datos Nacional de Subvenciones) y del portal Funding &amp; Tenders de la Comisión Europea — consultadas directamente desde sus fuentes oficiales.</p>
+      <div class="hero-stats" style="margin-bottom:1.5rem">
+        <div class="hero-stat"><div class="val" id="stat-total">—</div><div class="lbl">Convocatorias cargadas</div></div>
+        <div class="hero-stat"><div class="val" id="stat-open">—</div><div class="lbl">Identificadas como abiertas</div></div>
+        <div class="hero-stat"><div class="val">2</div><div class="lbl">Fuentes oficiales</div></div>
       </div>
-      <button class="btn-p" onclick="registrarAlerta()" style="width:fit-content">
-        Activar alertas gratuitas →
-      </button>
+      <a href="#wizard-card" class="hero-cta">
+        <i class="ti ti-sparkles"></i> Encontrar financiación
+      </a>
     </div>
-  </div>
 
-</div>
+    <!-- ── PAGE: WIZARD ─────────────────────────────────────── -->
+    <div id="page-wizard" class="page-section active">
+      <div class="card" id="wizard-card">
 
-<!-- MODAL -->
-<div class="overlay" id="overlay" onclick="if(event.target===this)cerrarModal()">
-  <div class="modal">
-    <button class="modal-x" onclick="cerrarModal()">&#215;</button>
-    <div id="modal-body"></div>
-  </div>
-</div>
+        <!-- PROGRESS -->
+        <div class="progress-wrap">
+          <div class="progress-steps" id="progress-steps"></div>
+          <div class="progress-label" id="progress-label">Paso 1 de 4</div>
+        </div>
 
-<footer>
-  <p style="margin-bottom:6px">
-    FinanciApp · Datos en tiempo real del
-    <a href="https://www.boe.es/rss/canal.php?c=ayudas" target="_blank" rel="noopener">BOE Ayudas</a>,
-    <a href="https://boe.es/datosabiertos/api/boe/sumario/" target="_blank" rel="noopener">BOE API Sumario</a>,
-    <a href="https://ec.europa.eu/info/funding-tenders/opportunities/data/referenceData/callupdates-rss.xml" target="_blank" rel="noopener">Comisión Europea</a>
-    y <a href="https://www.dogv.gva.es/datos/rss/rss_dogv.xml" target="_blank" rel="noopener">GVA/DOGV</a>
-  </p>
-  <p>Plataforma de datos abiertos · Sin cookies de terceros · Aviso legal</p>
-</footer>
+        <!-- STEPS -->
+        <div class="steps-wrap">
 
-<script>
-// ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
-// BASE_URL apunta a tus funciones Vercel.
-// En desarrollo local (Live Server) puedes probar con allorigins como fallback.
-// En producción, Vercel asigna automáticamente la URL del proyecto.
-const BASE_URL = ''; // vacío = mismo dominio (funciona en Vercel automáticamente)
+          <!-- STEP 1: Entidad -->
+          <div class="step active" id="step-1">
+            <div class="step-eyebrow">Paso 1 · Entidad</div>
+            <div class="step-title">¿Qué tipo de entidad sois?</div>
+            <div class="step-hint">Esto determina qué convocatorias son elegibles para vuestro perfil.</div>
+            <div class="opts" id="opts-1">
+              <button class="opt" onclick="pick(1,'pyme',this)"><i class="ti ti-building-store" aria-hidden="true"></i>Pyme (&lt;250 empleados)</button>
+              <button class="opt" onclick="pick(1,'gran',this)"><i class="ti ti-building-skyscraper" aria-hidden="true"></i>Gran empresa</button>
+              <button class="opt" onclick="pick(1,'uni',this)"><i class="ti ti-school" aria-hidden="true"></i>Universidad / OPI</button>
+              <button class="opt" onclick="pick(1,'publica',this)"><i class="ti ti-building-community" aria-hidden="true"></i>Entidad pública</button>
+              <button class="opt" onclick="pick(1,'ong',this)"><i class="ti ti-heart-handshake" aria-hidden="true"></i>ONG / Tercer sector</button>
+              <button class="opt" onclick="pick(1,'startup',this)"><i class="ti ti-rocket" aria-hidden="true"></i>Startup</button>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="f-pais">País</label>
+                <select id="f-pais">
+                  <option value="es" selected>España</option>
+                  <option value="pt">Portugal</option>
+                  <option value="fr">Francia</option>
+                  <option value="de">Alemania</option>
+                  <option value="otro">Otro país UE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-ccaa">Comunidad autónoma</label>
+                <select id="f-ccaa">
+                  <option value="">Selecciona...</option>
+                  <option>Andalucía</option><option>Aragón</option><option>Asturias</option>
+                  <option>Baleares</option><option>Canarias</option><option>Cantabria</option>
+                  <option>Castilla-La Mancha</option><option>Castilla y León</option><option>Cataluña</option>
+                  <option>Comunitat Valenciana</option><option>Extremadura</option><option>Galicia</option>
+                  <option>La Rioja</option><option>Madrid</option><option>Murcia</option>
+                  <option>Navarra</option><option>País Vasco</option><option>Ceuta</option><option>Melilla</option>
+                </select>
+              </div>
+            </div>
+            <div class="step-nav">
+              <span></span>
+              <button class="btn-next" id="next-1" onclick="goNext(1)" disabled>
+                Siguiente <i class="ti ti-arrow-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
 
-const FUENTES = {
-  'boe-ayudas': { label: 'BOE — Canal Ayudas',   endpoint: '/api/boe?fuente=ayudas', ambito: 'nac' },
-  'boe-sec3':   { label: 'BOE — Sección III',     endpoint: '/api/boe?fuente=sec3',   ambito: 'nac' },
-  'eu':         { label: 'Comisión Europea',       endpoint: '/api/eu',                ambito: 'eu'  },
-  'gva':        { label: 'GVA / DOGV',             endpoint: '/api/gva',               ambito: 'loc' },
-};
+          <!-- STEP 2: Proyecto -->
+          <div class="step" id="step-2">
+            <div class="step-eyebrow">Paso 2 · Proyecto</div>
+            <div class="step-title">Cuéntanos sobre el proyecto</div>
+            <div class="step-hint">Describid brevemente qué queréis hacer y en qué sector.</div>
+            <div class="field-row single">
+              <div class="field">
+                <label for="f-proyecto">Descripción breve del proyecto</label>
+                <textarea id="f-proyecto" rows="2" placeholder="Ej: Plataforma de IA para optimización de la cadena de suministro industrial..."></textarea>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="f-sector">Sector principal</label>
+                <select id="f-sector">
+                  <option value="">Selecciona...</option>
+                  <option>Tecnología / TIC</option>
+                  <option>Industria / Manufactura</option>
+                  <option>Agroalimentario</option>
+                  <option>Salud / Biotecnología</option>
+                  <option>Energía / Medio ambiente</option>
+                  <option>Movilidad / Logística</option>
+                  <option>Turismo / Cultura</option>
+                  <option>Educación / Formación</option>
+                  <option>Finanzas / Seguros</option>
+                  <option>Administración pública</option>
+                  <option>Otro</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-tec">Tecnología o temática clave</label>
+                <input id="f-tec" type="text" placeholder="Ej: inteligencia artificial, blockchain, economía circular…">
+              </div>
+            </div>
+            <div class="trl-block">
+              <label>Nivel de madurez tecnológica (TRL)</label>
+              <div class="trl-row">
+                <input type="range" min="0" max="9" value="0" id="trl-slider" step="1" oninput="updateTRL(this.value)" aria-label="Nivel TRL">
+                <div class="trl-val" id="trl-val">No aplica</div>
+              </div>
+              <div class="trl-desc" id="trl-desc">Dejad en 0 si no aplica o no conocéis el nivel de madurez tecnológica del proyecto.</div>
+            </div>
+            <div class="step-nav">
+              <button class="btn-back" onclick="goBack(2)"><i class="ti ti-arrow-left" aria-hidden="true"></i> Atrás</button>
+              <button class="btn-next" onclick="goNext(2)">Siguiente <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
+            </div>
+          </div>
 
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
-let todas = [];
-let tabActiva = 'all';
-let conv_sel = null;
-const errores = {};
+          <!-- STEP 3: Objetivos -->
+          <div class="step" id="step-3">
+            <div class="step-eyebrow">Paso 3 · Objetivos</div>
+            <div class="step-title">¿Cuál es el objetivo principal?</div>
+            <div class="step-hint">Podéis seleccionar más de uno.</div>
+            <div class="opts" id="opts-3">
+              <button class="opt" onclick="multipick(3,'idi',this)"><i class="ti ti-flask" aria-hidden="true"></i>I+D+i</button>
+              <button class="opt" onclick="multipick(3,'digital',this)"><i class="ti ti-cpu" aria-hidden="true"></i>Digitalización</button>
+              <button class="opt" onclick="multipick(3,'sostenib',this)"><i class="ti ti-leaf" aria-hidden="true"></i>Sostenibilidad</button>
+              <button class="opt" onclick="multipick(3,'inversion',this)"><i class="ti ti-trending-up" aria-hidden="true"></i>Inversión productiva</button>
+              <button class="opt" onclick="multipick(3,'inter',this)"><i class="ti ti-world" aria-hidden="true"></i>Internacionalización</button>
+              <button class="opt" onclick="multipick(3,'formacion',this)"><i class="ti ti-certificate" aria-hidden="true"></i>Formación</button>
+              <button class="opt" onclick="multipick(3,'otro',this)"><i class="ti ti-dots" aria-hidden="true"></i>Otro</button>
+            </div>
+            <div class="field-row single">
+              <div class="field">
+                <label for="f-budget">Presupuesto estimado del proyecto</label>
+                <select id="f-budget">
+                  <option value="">Selecciona un rango...</option>
+                  <option value="micro">Menos de 50.000 €</option>
+                  <option value="small">50.000 – 200.000 €</option>
+                  <option value="mid">200.000 – 1.000.000 €</option>
+                  <option value="large">1.000.000 – 5.000.000 €</option>
+                  <option value="xl">Más de 5.000.000 €</option>
+                </select>
+              </div>
+            </div>
+            <div class="step-nav">
+              <button class="btn-back" onclick="goBack(3)"><i class="ti ti-arrow-left" aria-hidden="true"></i> Atrás</button>
+              <button class="btn-next" id="next-3" onclick="goNext(3)" disabled>Siguiente <i class="ti ti-arrow-right" aria-hidden="true"></i></button>
+            </div>
+          </div>
 
-// ─── CARGA ────────────────────────────────────────────────────────────────────
-async function cargarTodo() {
-  setStatus('loading', 'Consultando fuentes oficiales…');
-  mostrarSkeletons();
-  todas = [];
-  Object.keys(errores).forEach(k => delete errores[k]);
+          <!-- STEP 4: Estrategia -->
+          <div class="step" id="step-4">
+            <div class="step-eyebrow">Paso 4 · Estrategia</div>
+            <div class="step-title">Variables estratégicas</div>
+            <div class="step-hint">Estas preferencias nos ayudan a priorizar y ordenar los resultados.</div>
 
-  const promesas = Object.entries(FUENTES).map(async ([key, cfg]) => {
-    try {
-      const r = await fetch(BASE_URL + cfg.endpoint);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const json = await r.json();
-      if (!json.ok) throw new Error(json.error || 'Error desconocido');
-      return json.data || [];
-    } catch (e) {
-      errores[key] = e.message;
-      console.warn(`[${key}]`, e.message);
-      return [];
-    }
-  });
+            <div class="pills-block">
+              <label>Fuente de financiación preferida</label>
+              <div class="pills" id="pills-fuente">
+                <button class="pill" onclick="pillpick('fuente','ue',this)">Unión Europea</button>
+                <button class="pill" onclick="pillpick('fuente','estatal',this)">Estatal (BDNS)</button>
+                <button class="pill" onclick="pillpick('fuente','autonomica',this)">Autonómica</button>
+                <button class="pill sel" onclick="pillpick('fuente','indiferente',this)">Indiferente</button>
+              </div>
+            </div>
 
-  const resultados = await Promise.allSettled(promesas);
-  resultados.forEach(r => {
-    if (r.status === 'fulfilled') todas.push(...r.value);
-  });
+            <div class="pills-block">
+              <label>Horizonte temporal</label>
+              <div class="pills" id="pills-horizonte">
+                <button class="pill" onclick="pillpick('horizonte','urgente',this)"><i class="ti ti-bolt" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Urgente (&lt;3 meses)</button>
+                <button class="pill" onclick="pillpick('horizonte','corto',this)">Corto plazo (3–6 m)</button>
+                <button class="pill sel" onclick="pillpick('horizonte','medio',this)">Medio plazo (&gt;6 m)</button>
+              </div>
+            </div>
 
-  todas = dedup(todas);
+            <div class="pills-block">
+              <label>Tipo de participación</label>
+              <div class="pills" id="pills-tipo">
+                <button class="pill" onclick="pillpick('tipo','individual',this)">Proyecto individual</button>
+                <button class="pill" onclick="pillpick('tipo','consorcio-nac',this)">Consorcio nacional</button>
+                <button class="pill" onclick="pillpick('tipo','consorcio-int',this)">Consorcio internacional</button>
+              </div>
+            </div>
 
-  // Actualizar contadores
-  document.getElementById('s-total').textContent = todas.length;
-  document.getElementById('s-open').textContent  = todas.filter(c => c.estado === 'Abierta').length;
-  document.getElementById('c-all').textContent   = todas.length;
+            <div class="field-row">
+              <div class="field">
+                <label for="f-exp">Experiencia previa en ayudas públicas</label>
+                <select id="f-exp">
+                  <option value="no">No, es la primera vez</option>
+                  <option value="si-nac">Sí, ayudas nacionales</option>
+                  <option value="si-eu">Sí, ayudas europeas</option>
+                  <option value="si-ambas">Sí, nacionales y europeas</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="f-cofin">Capacidad de cofinanciación</label>
+                <select id="f-cofin">
+                  <option value="">No aplica / desconocida</option>
+                  <option value="10">Hasta 10%</option>
+                  <option value="25">10 – 25%</option>
+                  <option value="50">25 – 50%</option>
+                  <option value="50+">Más del 50%</option>
+                </select>
+              </div>
+            </div>
 
-  Object.keys(FUENTES).forEach(key => {
-    const n = todas.filter(c => c.fuente === key).length;
-    const el = document.getElementById('c-' + key);
-    if (el) el.textContent = n;
-  });
+            <div class="step-nav">
+              <button class="btn-back" onclick="goBack(4)"><i class="ti ti-arrow-left" aria-hidden="true"></i> Atrás</button>
+              <button class="btn-next" onclick="showResults()">
+                <i class="ti ti-search" aria-hidden="true"></i> Ver convocatorias
+              </button>
+            </div>
+          </div>
 
-  const nErr = Object.keys(errores).length;
-  if (nErr === 0) {
-    setStatus('ok', `${todas.length} convocatorias cargadas desde ${Object.keys(FUENTES).length} fuentes oficiales`);
-  } else if (todas.length > 0) {
-    setStatus('warn', `${todas.length} convocatorias · ${nErr} fuente(s) con error`);
-  } else {
-    setStatus('error', 'No se pudo conectar. Asegúrate de que las funciones Vercel están desplegadas.');
-  }
+          <!-- RESULTS -->
+          <div class="step" id="step-results">
+            <div class="step-eyebrow">Resultados</div>
+            <div class="step-title">Convocatorias recomendadas para tu perfil</div>
+            <div class="results-bar" style="margin-top:0.75rem">
+              <div class="results-summary" id="results-meta"></div>
+              <button class="btn-restart" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Nueva búsqueda</button>
+            </div>
+            <div id="results-list"></div>
+            <div class="results-cta">
+              <button class="btn-primary" onclick="analyzeWithAI()">
+                <i class="ti ti-sparkles" aria-hidden="true"></i> Analizar con IA
+              </button>
+              <button class="btn-secondary" onclick="exportResults()">
+                <i class="ti ti-download" aria-hidden="true"></i> Exportar resultados
+              </button>
+            </div>
+          </div>
 
-  document.getElementById('ts').textContent = 'Actualizado: ' +
-    new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+        </div><!-- /steps-wrap -->
+      </div><!-- /card -->
+    </div><!-- /page-wizard -->
 
-  filtrar();
-}
-
-function mostrarSkeletons() {
-  document.getElementById('cards').innerHTML = [1,2,3].map(() =>
-    `<div class="skel"><div class="skel-l" style="width:65%;margin-bottom:10px"></div><div class="skel-l" style="width:38%"></div></div>`
-  ).join('');
-}
-
-// ─── FILTROS ──────────────────────────────────────────────────────────────────
-function selTab(src, btn) {
-  tabActiva = src;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  filtrar();
-}
-
-function filtrar() {
-  const q      = document.getElementById('q').value.toLowerCase();
-  const ambito = document.getElementById('f-ambito').value;
-  const estado = document.getElementById('f-estado').value;
-  const benef  = document.getElementById('f-benef').value;
-
-  const lista = todas.filter(c => {
-    if (tabActiva !== 'all' && c.fuente !== tabActiva) return false;
-    if (ambito && c.ambito !== ambito) return false;
-    if (estado && c.estado !== estado) return false;
-    if (benef  && c.beneficiario !== benef) return false;
-    if (q && !`${c.titulo} ${c.organismo} ${c.descripcion}`.toLowerCase().includes(q)) return false;
-    return true;
-  });
-
-  document.getElementById('nres').textContent = `${lista.length} resultado${lista.length !== 1 ? 's' : ''}`;
-  renderCards(lista);
-}
-
-// ─── RENDER ───────────────────────────────────────────────────────────────────
-function renderCards(lista) {
-  const el = document.getElementById('cards');
-  if (!lista.length) {
-    el.innerHTML = `<div class="empty"><strong>Sin resultados</strong>Prueba con otros filtros o pulsa Actualizar.</div>`;
-    return;
-  }
-  el.innerHTML = lista.map(c => `
-    <div class="card" onclick="abrirModal('${esc(c.id)}')">
-      <div class="cicon ${iclass(c.ambito)}">${itxt(c.ambito)}</div>
-      <div class="cbody">
-        <div class="cheader">
-          <div class="ctitle">${esc(c.titulo)}</div>
-          <div class="badges">
-            <span class="badge ${abadge(c.ambito)}">${albl(c.ambito)}</span>
-            <span class="badge ${ebadge(c.estado)}">${c.estado}</span>
+    <!-- ── PAGE: FEED XML ────────────────────────────────────── -->
+    <div id="page-feed" class="page-section">
+      <div class="card">
+        <div class="section-header">
+          <div class="section-eyebrow">Feed · Atom / RSS</div>
+          <div class="section-title">Feed XML público</div>
+          <div class="section-hint">Estándar RFC 4287 · Compatible con Make, Zapier, Power Automate y lectores RSS.</div>
+        </div>
+        <div class="section-body">
+          <div class="info-box">
+            <i class="ti ti-rss" aria-hidden="true"></i>
+            Feed Atom con todas las convocatorias activas de BDNS y Funding &amp; Tenders EU. Actúa como fuente de datos en tiempo real para tus automatizaciones.
+          </div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <button class="btn-primary" onclick="downloadFeed()"><i class="ti ti-download" aria-hidden="true"></i> Descargar feed.xml</button>
+            <button class="btn-secondary" id="btn-preview" onclick="toggleXmlPreview()"><i class="ti ti-eye" aria-hidden="true"></i> Vista previa XML</button>
+          </div>
+          <div id="xml-preview-block" style="display:none">
+            <div class="xml-preview" aria-label="Vista previa del feed XML">
+<span class="xml-tag">&lt;?xml</span> <span class="xml-attr">version</span>=<span class="xml-val">"1.0"</span> <span class="xml-attr">encoding</span>=<span class="xml-val">"UTF-8"</span><span class="xml-tag">?&gt;</span>
+<span class="xml-tag">&lt;feed</span> <span class="xml-attr">xmlns</span>=<span class="xml-val">"http://www.w3.org/2005/Atom"</span><span class="xml-tag">&gt;</span>
+  <span class="xml-tag">&lt;title&gt;</span><span class="xml-txt">FinanciApp NTT DATA — Convocatorias activas</span><span class="xml-tag">&lt;/title&gt;</span>
+  <span class="xml-tag">&lt;updated&gt;</span><span class="xml-txt" id="feed-date"></span><span class="xml-tag">&lt;/updated&gt;</span>
+  <span class="xml-tag">&lt;entry&gt;</span>
+    <span class="xml-tag">&lt;title&gt;</span><span class="xml-txt">Horizon Europe — AI &amp; Digital Technologies</span><span class="xml-tag">&lt;/title&gt;</span>
+    <span class="xml-tag">&lt;source&gt;</span><span class="xml-txt">EU Funding &amp; Tenders</span><span class="xml-tag">&lt;/source&gt;</span>
+    <span class="xml-tag">&lt;status&gt;</span><span class="xml-txt">open</span><span class="xml-tag">&lt;/status&gt;</span>
+    <span class="xml-tag">&lt;deadline&gt;</span><span class="xml-txt">2025-09-18</span><span class="xml-tag">&lt;/deadline&gt;</span>
+    <span class="xml-tag">&lt;amount&gt;</span><span class="xml-txt">hasta €3.000.000</span><span class="xml-tag">&lt;/amount&gt;</span>
+    <span class="xml-tag">&lt;link</span> <span class="xml-attr">href</span>=<span class="xml-val">"https://ec.europa.eu/info/funding-tenders/..."</span><span class="xml-tag">/&gt;</span>
+  <span class="xml-tag">&lt;/entry&gt;</span>
+  <span class="xml-tag">&lt;entry&gt;</span>
+    <span class="xml-tag">&lt;title&gt;</span><span class="xml-txt">CDTI — Proyectos de I+D Empresarial</span><span class="xml-tag">&lt;/title&gt;</span>
+    <span class="xml-tag">&lt;source&gt;</span><span class="xml-txt">BDNS</span><span class="xml-tag">&lt;/source&gt;</span>
+    <span class="xml-tag">&lt;status&gt;</span><span class="xml-txt">open</span><span class="xml-tag">&lt;/status&gt;</span>
+    <span class="xml-tag">&lt;deadline&gt;</span><span class="xml-txt">2025-10-31</span><span class="xml-tag">&lt;/deadline&gt;</span>
+    <span class="xml-tag">&lt;amount&gt;</span><span class="xml-txt">hasta 500.000 €</span><span class="xml-tag">&lt;/amount&gt;</span>
+    <span class="xml-tag">&lt;link</span> <span class="xml-attr">href</span>=<span class="xml-val">"https://www.infosubvenciones.es/..."</span><span class="xml-tag">/&gt;</span>
+  <span class="xml-tag">&lt;/entry&gt;</span>
+<span class="xml-tag">&lt;/feed&gt;</span>
+            </div>
           </div>
         </div>
-        <div class="cmeta">
-          <span>${esc(c.organismo)}</span>
-          ${c.cierre ? `<span>Cierre: ${fmtFecha(c.cierre)}</span>` : ''}
-          ${c.fechaPublicacion ? `<span>Publicado: ${fmtFecha(c.fechaPublicacion)}</span>` : ''}
-          <span style="color:var(--ink-muted);font-style:italic">${esc(FUENTES[c.fuente]?.label || c.fuente)}</span>
+      </div>
+    </div>
+
+    <!-- ── PAGE: ALERTAS ─────────────────────────────────────── -->
+    <div id="page-alertas" class="page-section">
+      <div class="card">
+        <div class="section-header">
+          <div class="section-eyebrow">Alertas · Email</div>
+          <div class="section-title">Alertas personalizadas</div>
+          <div class="section-hint">Recibe una notificación cuando se publique una convocatoria de tu interés.</div>
+        </div>
+        <div class="section-body">
+          <div class="info-box">
+            <i class="ti ti-bell" aria-hidden="true"></i>
+            Te avisamos cuando BDNS o Funding &amp; Tenders publiquen nuevas convocatorias que encajen con tu perfil. Sin spam, solo lo relevante.
+          </div>
+          <div class="alert-form-grid">
+            <div class="field">
+              <label for="a-email">Correo electrónico</label>
+              <input id="a-email" type="email" placeholder="nombre@empresa.com">
+            </div>
+            <div class="field">
+              <label for="a-nombre">Nombre</label>
+              <input id="a-nombre" type="text" placeholder="Tu nombre">
+            </div>
+            <div class="field">
+              <label for="a-entidad">Tipo de entidad</label>
+              <select id="a-entidad">
+                <option value="">Selecciona...</option>
+                <option>Pyme</option><option>Startup</option><option>Gran empresa</option>
+                <option>Universidad / OPI</option><option>Entidad pública</option><option>ONG / Tercer sector</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-ambito">Ámbito de interés</label>
+              <select id="a-ambito">
+                <option value="">Todos los ámbitos</option>
+                <option>Estatal (BDNS)</option>
+                <option>Europeo (Funding &amp; Tenders)</option>
+                <option>Autonómico</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-objetivo">Objetivo principal</label>
+              <select id="a-objetivo">
+                <option value="">Todos los objetivos</option>
+                <option>I+D+i</option><option>Digitalización</option><option>Sostenibilidad</option>
+                <option>Inversión productiva</option><option>Internacionalización</option><option>Formación</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="a-frecuencia">Frecuencia de notificación</label>
+              <select id="a-frecuencia">
+                <option>Inmediata (en cuanto se publique)</option>
+                <option>Resumen semanal</option>
+                <option>Resumen mensual</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="activateAlert()">
+            <i class="ti ti-bell" aria-hidden="true"></i> Activar alertas
+          </button>
+          <div id="alert-confirm" style="display:none;margin-top:1rem">
+            <div class="info-box" style="background:#edf7e6;border-left-color:#4ade80;border-color:#a8d98a;color:#1a4d10">
+              <i class="ti ti-circle-check" aria-hidden="true" style="color:#2d6a1f"></i>
+              ¡Alerta activada correctamente! Te avisaremos cuando encontremos convocatorias relevantes para tu perfil.
+            </div>
+          </div>
         </div>
       </div>
-      <div class="cright">
-        ${c.importe ? `<div class="camount">${esc(c.importe)}</div><div class="camount-lbl">importe</div>` : ''}
-        <a class="clink" href="${esc(c.enlace)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver oficial ↗</a>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+      <div class="footer-sources">
+        Datos en tiempo real de
+        <a href="https://www.infosubvenciones.es" target="_blank" rel="noopener">BDNS (infosubvenciones.es)</a> ·
+        <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/" target="_blank" rel="noopener">Funding &amp; Tenders EU</a>
       </div>
-    </div>
-  `).join('');
-}
+      <span class="footer-brand">NTT DATA · Plataforma de datos abiertos · Sin cookies de terceros</span>
+    </footer>
 
-// ─── MODAL ────────────────────────────────────────────────────────────────────
-function abrirModal(id) {
-  const c = todas.find(x => x.id === id);
-  if (!c) return;
-  conv_sel = c;
-  document.getElementById('modal-body').innerHTML = `
-    <div class="badges" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem">
-      <span class="badge ${abadge(c.ambito)}">${albl(c.ambito)}</span>
-      <span class="badge ${ebadge(c.estado)}">${c.estado}</span>
-      <span class="badge" style="background:var(--bg);color:var(--ink-muted)">${esc(FUENTES[c.fuente]?.label || c.fuente)}</span>
-    </div>
-    <h2>${esc(c.titulo)}</h2>
-    <div style="margin-bottom:1.25rem">
-      <div class="mrow"><span class="lbl">Organismo</span><span class="val">${esc(c.organismo)}</span></div>
-      ${c.importe ? `<div class="mrow"><span class="lbl">Importe</span><span class="val">${esc(c.importe)}</span></div>` : ''}
-      ${c.cierre ? `<div class="mrow"><span class="lbl">Cierre</span><span class="val">${fmtFecha(c.cierre)}</span></div>` : ''}
-      ${c.beneficiario ? `<div class="mrow"><span class="lbl">Beneficiario</span><span class="val">${esc(c.beneficiario)}</span></div>` : ''}
-      ${c.fechaPublicacion ? `<div class="mrow"><span class="lbl">Publicación</span><span class="val">${fmtFecha(c.fechaPublicacion)}</span></div>` : ''}
-      ${c.referencia ? `<div class="mrow"><span class="lbl">Referencia</span><span class="val">${esc(c.referencia)}</span></div>` : ''}
-    </div>
-    ${c.descripcion ? `<div class="mdesc">${esc(c.descripcion)}</div>` : ''}
-    <div class="mactions">
-      <a class="btn-p" href="${esc(c.enlace)}" target="_blank" rel="noopener">Ver fuente oficial ↗</a>
-      <button class="btn-s" onclick="copiarXml()">Copiar XML Atom</button>
-    </div>
-    <div class="xml-wrap">
-      <h3>Entrada XML Atom (RFC 4287)</h3>
-      <div class="xml-block">${colorXml(buildEntry(c))}</div>
-    </div>
-  `;
-  document.getElementById('overlay').classList.add('open');
-}
+  </main>
 
-function cerrarModal() { document.getElementById('overlay').classList.remove('open'); }
+  <script>
+    /* ── DATA ────────────────────────────────────────────────── */
+    const TRL_LABELS = [
+      'No aplica o desconocido',
+      'TRL 1 — Principios básicos observados',
+      'TRL 2 — Concepto tecnológico formulado',
+      'TRL 3 — Prueba experimental de concepto',
+      'TRL 4 — Tecnología validada en laboratorio',
+      'TRL 5 — Tecnología validada en entorno relevante',
+      'TRL 6 — Tecnología demostrada en entorno relevante',
+      'TRL 7 — Demostración en entorno operativo real',
+      'TRL 8 — Sistema completo y cualificado',
+      'TRL 9 — Sistema probado en entorno real (producción)'
+    ];
 
-// ─── XML ATOM ─────────────────────────────────────────────────────────────────
-function xmlEsc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+    const STEPS_META = [
+      { label: 'Entidad' },
+      { label: 'Proyecto' },
+      { label: 'Objetivos' },
+      { label: 'Estrategia' }
+    ];
 
-function buildEntry(c) {
-  return `<entry xmlns:fa="https://financiapp.es/ns/1.0">
-  <id>urn:financiapp:${xmlEsc(c.id)}</id>
-  <title type="text">${xmlEsc(c.titulo)}</title>
-  <link href="${xmlEsc(c.enlace)}" rel="alternate" type="text/html"/>
-  <updated>${new Date().toISOString()}</updated>
-  <author>
-    <name>${xmlEsc(c.organismo)}</name>
-  </author>
-  <category term="${xmlEsc(c.ambito)}" label="${xmlEsc(albl(c.ambito))}"/>
-  <category term="${xmlEsc(c.fuente)}" label="${xmlEsc(FUENTES[c.fuente]?.label || c.fuente)}"/>
-  <summary type="text">${xmlEsc((c.descripcion || c.titulo).slice(0,300))}</summary>
-  <fa:estado>${xmlEsc(c.estado)}</fa:estado>
-  <fa:beneficiario>${xmlEsc(c.beneficiario||'')}</fa:beneficiario>
-  <fa:importe>${xmlEsc(c.importe||'')}</fa:importe>
-  <fa:cierre>${xmlEsc(c.cierre||'')}</fa:cierre>
-</entry>`;
-}
+    const GRANTS = [
+      {
+        id: 1, src: 'eu',
+        title: 'Horizon Europe — AI & Digital Technologies',
+        org: 'European Commission · DG CONNECT',
+        status: 'open', amount: 'hasta €3.000.000',
+        deadline: '18/09/2025',
+        url: 'https://ec.europa.eu/info/funding-tenders/opportunities/portal/',
+        tags: ['I+D+i', 'Digitalización', 'Consorcio internacional'],
+        obj: ['idi', 'digital'], size: ['mid', 'large', 'xl'],
+        tipo: ['consorcio-int'], fuente: ['ue', 'indiferente'],
+        entity: ['pyme', 'uni', 'gran', 'startup'], trl: [3, 4, 5, 6, 7]
+      },
+      {
+        id: 2, src: 'bdns',
+        title: 'CDTI — Proyectos de I+D Empresarial (línea directa)',
+        org: 'Centro para el Desarrollo Tecnológico Industrial',
+        status: 'open', amount: 'hasta 500.000 €',
+        deadline: '31/10/2025',
+        url: 'https://www.cdti.es',
+        tags: ['I+D+i', 'Nacional', 'Préstamo bonificado'],
+        obj: ['idi'], size: ['small', 'mid', 'large'],
+        tipo: ['individual', 'consorcio-nac'], fuente: ['estatal', 'indiferente'],
+        entity: ['pyme', 'startup', 'gran'], trl: [3, 4, 5, 6]
+      },
+      {
+        id: 3, src: 'bdns',
+        title: 'Kit Digital — Pymes y autónomos (Fase III)',
+        org: 'Red.es · Ministerio de Asuntos Económicos',
+        status: 'open', amount: 'hasta 29.000 €',
+        deadline: '31/12/2025',
+        url: 'https://www.acelerapyme.gob.es/kit-digital',
+        tags: ['Digitalización', 'Pyme', 'Subvención directa'],
+        obj: ['digital'], size: ['micro', 'small'],
+        tipo: ['individual'], fuente: ['estatal', 'indiferente'],
+        entity: ['pyme', 'startup'], trl: [7, 8, 9]
+      },
+      {
+        id: 4, src: 'eu',
+        title: 'EIC Accelerator — Deep Tech Scale-up Grant & Equity',
+        org: 'European Innovation Council',
+        status: 'upcoming', amount: 'hasta €2.500.000',
+        deadline: '12/11/2025',
+        url: 'https://eic.ec.europa.eu/eic-funding-opportunities/eic-accelerator_en',
+        tags: ['I+D+i', 'Startup', 'Equity + subvención'],
+        obj: ['idi', 'inversion'], size: ['mid', 'large'],
+        tipo: ['individual'], fuente: ['ue', 'indiferente'],
+        entity: ['startup', 'pyme'], trl: [5, 6, 7, 8]
+      },
+      {
+        id: 5, src: 'bdns',
+        title: 'PERTE — Proyectos Estratégicos de Economía Circular',
+        org: 'Ministerio para la Transición Ecológica',
+        status: 'open', amount: 'hasta 1.200.000 €',
+        deadline: '30/09/2025',
+        url: 'https://www.miteco.gob.es',
+        tags: ['Sostenibilidad', 'Nacional', 'PERTE'],
+        obj: ['sostenib'], size: ['mid', 'large'],
+        tipo: ['individual', 'consorcio-nac'], fuente: ['estatal', 'indiferente'],
+        entity: ['pyme', 'gran', 'publica'], trl: [4, 5, 6, 7]
+      },
+      {
+        id: 6, src: 'eu',
+        title: 'LIFE Programme — Naturaleza y Biodiversidad 2025',
+        org: 'European Commission · DG ENV',
+        status: 'open', amount: 'hasta €5.000.000',
+        deadline: '02/10/2025',
+        url: 'https://cinea.ec.europa.eu/programmes/life_en',
+        tags: ['Sostenibilidad', 'Europeo', 'Consorcio'],
+        obj: ['sostenib'], size: ['mid', 'large', 'xl'],
+        tipo: ['consorcio-nac', 'consorcio-int'], fuente: ['ue', 'indiferente'],
+        entity: ['ong', 'publica', 'uni'], trl: [0, 1, 2, 3, 4, 5]
+      },
+      {
+        id: 7, src: 'bdns',
+        title: 'Erasmus+ KA2 — Alianzas para la Formación Profesional',
+        org: 'SEPIE · Agencia Nacional Española',
+        status: 'open', amount: 'hasta 400.000 €',
+        deadline: '28/03/2026',
+        url: 'https://www.sepie.es',
+        tags: ['Formación', 'Internacional', 'Consorcio'],
+        obj: ['formacion', 'inter'], size: ['small', 'mid'],
+        tipo: ['consorcio-int'], fuente: ['ue', 'indiferente'],
+        entity: ['uni', 'publica', 'ong'], trl: [0]
+      },
+      {
+        id: 8, src: 'bdns',
+        title: 'Inversiones PERTE AgroAlimentario — Industria 4.0',
+        org: 'Ministerio de Industria, Comercio y Turismo',
+        status: 'upcoming', amount: 'hasta 800.000 €',
+        deadline: '15/11/2025',
+        url: 'https://www.mincotur.gob.es',
+        tags: ['Inversión productiva', 'Industria', 'Digital'],
+        obj: ['inversion', 'digital'], size: ['mid', 'large'],
+        tipo: ['individual', 'consorcio-nac'], fuente: ['estatal', 'indiferente'],
+        entity: ['pyme', 'gran'], trl: [6, 7, 8, 9]
+      },
+      {
+        id: 9, src: 'eu',
+        title: 'CEF Digital — Infraestructuras Digitales Transeuropeas',
+        org: 'European Commission · CINEA',
+        status: 'open', amount: 'hasta €10.000.000',
+        deadline: '22/08/2025',
+        url: 'https://cinea.ec.europa.eu/programmes/cef',
+        tags: ['Digitalización', 'Infraestructura', 'Europeo'],
+        obj: ['digital', 'inversion'], size: ['large', 'xl'],
+        tipo: ['consorcio-int'], fuente: ['ue', 'indiferente'],
+        entity: ['publica', 'gran'], trl: [6, 7, 8, 9]
+      }
+    ];
 
-function buildFeed() {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"
-      xmlns:fa="https://financiapp.es/ns/1.0">
-  <id>https://financiapp.es/feed.xml</id>
-  <title>FinanciApp — Convocatorias de financiación pública</title>
-  <subtitle>BOE Ayudas · BOE Sec. III · Comisión Europea · GVA/DOGV</subtitle>
-  <link href="https://financiapp.es/feed.xml" rel="self" type="application/atom+xml"/>
-  <link href="https://financiapp.es" rel="alternate" type="text/html"/>
-  <updated>${new Date().toISOString()}</updated>
-  <author><name>FinanciApp</name><uri>https://financiapp.es</uri></author>
-  <generator version="2.0">FinanciApp</generator>
-${todas.map(buildEntry).join('\n')}
-</feed>`;
-}
+    /* ── STATE ───────────────────────────────────────────────── */
+    const S = {
+      step: 1,
+      entity: null,
+      objectives: new Set(),
+      trl: 0,
+      pills: { fuente: 'indiferente', horizonte: 'medio', tipo: null }
+    };
 
-function colorXml(xml) {
-  return xml
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/&lt;(\/?[\w:]+)/g,'<span class="xt">&lt;$1</span>')
-    .replace(/([\w:]+)=&quot;([^&]*)&quot;/g,'<span class="xa">$1</span>=<span class="xv">&quot;$2&quot;</span>');
-}
+    /* ── PROGRESS ────────────────────────────────────────────── */
+    function buildProgress() {
+      const isResults = S.step > 4;
+      const container = document.getElementById('progress-steps');
+      container.innerHTML = STEPS_META.map((s, i) => {
+        const n = i + 1;
+        const done = S.step > n;
+        const active = S.step === n;
+        return `<div class="ps">
+          <div class="ps-dot ${done ? 'done' : ''} ${active ? 'active' : ''}" aria-label="Paso ${n}: ${s.label}">
+            ${done ? '<i class="ti ti-check" style="font-size:12px" aria-hidden="true"></i>' : n}
+          </div>
+          <div class="ps-label ${active ? 'active' : ''}">${s.label}</div>
+        </div>${i < STEPS_META.length - 1 ? `<div class="ps-line ${done ? 'done' : ''}"></div>` : ''}`;
+      }).join('');
+      document.getElementById('progress-label').innerHTML = isResults
+        ? '<strong>Resultados</strong> — cuestionario completado'
+        : `Paso <strong>${S.step}</strong> de 4`;
+    }
 
-function copiarXml() {
-  if (!conv_sel) return;
-  const txt = buildEntry(conv_sel);
-  navigator.clipboard.writeText(txt).catch(() => {
-    const t = document.createElement('textarea');
-    t.value = txt; document.body.appendChild(t); t.select();
-    document.execCommand('copy'); document.body.removeChild(t);
-  });
-  alert('Entrada XML Atom copiada al portapapeles.');
-}
+    /* ── NAVIGATION ──────────────────────────────────────────── */
+    function goNext(from) {
+      document.getElementById(`step-${from}`).classList.remove('active');
+      S.step = from + 1;
+      document.getElementById(`step-${S.step}`).classList.add('active');
+      buildProgress();
+      window.scrollTo({ top: document.getElementById('wizard-card').offsetTop - 80, behavior: 'smooth' });
+    }
 
-function descargarFeed() {
-  const blob = new Blob([buildFeed()], {type:'application/atom+xml;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'financiapp-feed.xml'; a.click();
-}
+    function goBack(from) {
+      document.getElementById(`step-${from}`).classList.remove('active');
+      S.step = from - 1;
+      document.getElementById(`step-${S.step}`).classList.add('active');
+      buildProgress();
+    }
 
-function previsualizarFeed() {
-  const preview = buildFeed().slice(0, 2500) + '\n  ...\n</feed>';
-  document.getElementById('modal-body').innerHTML = `
-    <h2 style="font-family:'Fraunces',serif;font-weight:400;margin-bottom:1rem">Feed Atom — vista previa</h2>
-    <p style="font-size:13px;color:var(--ink-soft);margin-bottom:1rem">${todas.length} entradas · RFC 4287 · Compatible con Make, Zapier, Feedly</p>
-    <div class="xml-block">${colorXml(preview)}</div>
-    <div class="mactions" style="margin-top:1rem">
-      <button class="btn-p" onclick="descargarFeed();cerrarModal()">Descargar feed.xml completo</button>
-      <button class="btn-s" onclick="cerrarModal()">Cerrar</button>
-    </div>
-  `;
-  document.getElementById('overlay').classList.add('open');
-}
+    /* ── INTERACTIONS ────────────────────────────────────────── */
+    function pick(step, val, el) {
+      S.entity = val;
+      document.querySelectorAll(`#opts-${step} .opt`).forEach(o => o.classList.remove('sel'));
+      el.classList.add('sel');
+      const nb = document.getElementById(`next-${step}`);
+      if (nb) nb.disabled = false;
+    }
 
-// ─── ALERTAS ──────────────────────────────────────────────────────────────────
-function registrarAlerta() {
-  const nombre = document.getElementById('a-nombre').value.trim();
-  const email  = document.getElementById('a-email').value.trim();
-  if (!nombre || !email || !email.includes('@')) {
-    alert('Introduce el nombre de la entidad y un email válido.'); return;
-  }
-  // → Aquí conectarías con tu webhook de Make, Airtable API, o servicio de email
-  alert(`✓ Alerta activada para ${nombre}.\n\nRecibirás notificaciones en ${email}.`);
-}
+    function multipick(step, val, el) {
+      if (S.objectives.has(val)) { S.objectives.delete(val); el.classList.remove('sel'); }
+      else { S.objectives.add(val); el.classList.add('sel'); }
+      const nb = document.getElementById(`next-${step}`);
+      if (nb) nb.disabled = S.objectives.size === 0;
+    }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function dedup(list){const seen=new Set();return list.filter(c=>{const k=c.titulo.slice(0,60).toLowerCase();if(seen.has(k))return false;seen.add(k);return true})}
-function setStatus(st,msg){const d=document.getElementById('dot');d.className='dot'+(st==='loading'?' loading':st==='error'?' error':st==='warn'?' warn':'');document.getElementById('status').textContent=msg}
-function fmtFecha(s){if(!s)return '';try{const d=new Date(s.length===8?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:s);if(!isNaN(d))return d.toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'})}catch{}return s}
-function albl(a){return{eu:'Europeo',nac:'Nacional',loc:'Autonómico / Local'}[a]||a}
-function abadge(a){return{eu:'b-eu',nac:'b-nac',loc:'b-loc'}[a]||'b-nac'}
-function ebadge(e){return{'Abierta':'b-open','Próxima':'b-soon','Cerrada':'b-closed'}[e]||'b-open'}
-function iclass(a){return{eu:'i-eu',nac:'i-nac',loc:'i-loc'}[a]||'i-nac'}
-function itxt(a){return{eu:'EU',nac:'ES',loc:'CV'}[a]||'—'}
-function ir(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'})}
+    function pillpick(group, val, el) {
+      S.pills[group] = val;
+      document.querySelectorAll(`#pills-${group} .pill`).forEach(p => p.classList.remove('sel'));
+      el.classList.add('sel');
+    }
 
-// ─── ARRANQUE ─────────────────────────────────────────────────────────────────
-cargarTodo();
-</script>
+    function updateTRL(v) {
+      S.trl = parseInt(v);
+      document.getElementById('trl-val').textContent = v == 0 ? 'No aplica' : 'TRL ' + v;
+      document.getElementById('trl-desc').textContent = TRL_LABELS[S.trl];
+    }
+
+    /* ── SCORING ─────────────────────────────────────────────── */
+    function scoreGrant(g) {
+      let s = 0;
+      if (S.entity && g.entity.includes(S.entity)) s += 28;
+      const objs = Array.from(S.objectives);
+      if (objs.length > 0) {
+        const hits = objs.filter(o => g.obj.includes(o)).length;
+        s += Math.round((hits / objs.length) * 28);
+      }
+      const budget = document.getElementById('f-budget').value;
+      if (!budget || g.size.includes(budget)) s += 18;
+      const fuente = S.pills.fuente;
+      if (!fuente || g.fuente.includes(fuente)) s += 14;
+      const tipo = S.pills.tipo;
+      if (!tipo || g.tipo.includes(tipo)) s += 10;
+      if (S.trl === 0 || g.trl.includes(S.trl)) s += 2;
+      else s -= 8;
+      return Math.min(99, Math.max(35, s));
+    }
+
+    /* ── RESULTS ─────────────────────────────────────────────── */
+    function showResults() {
+      document.getElementById('step-4').classList.remove('active');
+      S.step = 5;
+      buildProgress();
+
+      const scored = GRANTS.map(g => ({ ...g, score: scoreGrant(g) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6);
+
+      const open = scored.filter(g => g.status === 'open').length;
+      document.getElementById('results-meta').innerHTML =
+        `<strong>${scored.length} convocatorias</strong> ordenadas por compatibilidad · <strong>${open}</strong> actualmente abiertas`;
+
+      document.getElementById('results-list').innerHTML = scored.map(g => `
+        <div class="grant-card">
+          <div class="src-badge ${g.src === 'bdns' ? 'bdns-b' : 'eu-b'}">
+            ${g.src === 'bdns' ? 'BDNS' : 'EU\nF&T'}
+          </div>
+          <div class="grant-main">
+            <div class="grant-title" title="${g.title}">${g.title}</div>
+            <div class="grant-org">${g.org}</div>
+            <div class="grant-tags">
+              <span class="tag ${g.status === 'open' ? 'tag-open' : 'tag-upcoming'}">${g.status === 'open' ? 'Abierta' : 'Próxima'}</span>
+              <span class="tag tag-match"><i class="ti ti-sparkles" style="font-size:10px;vertical-align:-1px;margin-right:2px" aria-hidden="true"></i>${g.score}% encaje</span>
+              <span class="tag"><i class="ti ti-calendar" style="font-size:11px;vertical-align:-1px;margin-right:2px" aria-hidden="true"></i>${g.deadline}</span>
+              ${g.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+            </div>
+          </div>
+          <div class="grant-right">
+            <span class="grant-amount">${g.amount}</span>
+            <a class="btn-detail" href="${g.url}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="font-size:13px" aria-hidden="true"></i> Ver ficha</a>
+            <button class="btn-ai" onclick="analyzeGrant('${g.title.replace(/'/g, "\\'")}')">
+              <i class="ti ti-sparkles" style="font-size:11px" aria-hidden="true"></i> Analizar
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('step-results').classList.add('active');
+
+      /* Update hero stats */
+      document.getElementById('stat-total').textContent = GRANTS.length;
+      document.getElementById('stat-open').textContent = GRANTS.filter(g => g.status === 'open').length;
+
+      window.scrollTo({ top: document.getElementById('wizard-card').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    function analyzeGrant(title) {
+      const entity = S.entity || 'entidad';
+      const objs = Array.from(S.objectives).join(', ') || 'varios objetivos';
+      alert(`Para analizar "${title}" con IA, conecta esta app a un servicio de IA o usa el botón "Analizar con IA" para el análisis completo del perfil.\n\nPerfil detectado: ${entity} · Objetivos: ${objs}`);
+    }
+
+    function analyzeWithAI() {
+      const entity = S.entity || 'entidad no especificada';
+      const objs = Array.from(S.objectives).join(', ') || 'no especificados';
+      const fuente = S.pills.fuente;
+      const horizonte = S.pills.horizonte;
+      console.log('Análisis IA solicitado:', { entity, objs, fuente, horizonte });
+      alert('Funcionalidad de análisis IA: conecta el endpoint de IA de NTT DATA o usa la integración con Claude API para un análisis detallado.\n\nPerfil: ' + entity + ' | Objetivos: ' + objs);
+    }
+
+    function exportResults() {
+      const scored = GRANTS.map(g => ({ ...g, score: scoreGrant(g) }))
+        .sort((a, b) => b.score - a.score).slice(0, 6);
+      const csv = ['Título,Fuente,Estado,Importe,Plazo,Encaje(%)']
+        .concat(scored.map(g => `"${g.title}","${g.src === 'bdns' ? 'BDNS' : 'EU Funding & Tenders'}","${g.status}","${g.amount}","${g.deadline}","${g.score}"`))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'financiapp_resultados.csv';
+      a.click();
+    }
+
+    function restart() {
+      S.step = 1; S.entity = null; S.objectives = new Set(); S.trl = 0;
+      S.pills = { fuente: 'indiferente', horizonte: 'medio', tipo: null };
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+      document.querySelectorAll('.pill').forEach(p => p.classList.remove('sel'));
+      document.getElementById('step-1').classList.add('active');
+      document.getElementById('next-1').disabled = true;
+      document.getElementById('next-3').disabled = true;
+      document.getElementById('trl-slider').value = 0;
+      updateTRL(0);
+      /* Reset default pills */
+      document.querySelector('#pills-fuente .pill:last-child').classList.add('sel');
+      document.querySelector('#pills-horizonte .pill:last-child').classList.add('sel');
+      buildProgress();
+      window.scrollTo({ top: document.getElementById('wizard-card').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    /* ── PAGE NAVIGATION ─────────────────────────────────────── */
+    function showPage(page) {
+      ['wizard', 'feed', 'alertas'].forEach(p => {
+        document.getElementById(`page-${p}`).classList.toggle('active', p === page);
+        document.getElementById(`nav-${p}`).classList.toggle('active', p === page);
+      });
+      document.getElementById('hero-block').style.display = page === 'wizard' ? '' : 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ── FEED ────────────────────────────────────────────────── */
+    function toggleXmlPreview() {
+      const block = document.getElementById('xml-preview-block');
+      const btn = document.getElementById('btn-preview');
+      const visible = block.style.display !== 'none';
+      block.style.display = visible ? 'none' : 'block';
+      btn.innerHTML = visible
+        ? '<i class="ti ti-eye"></i> Vista previa XML'
+        : '<i class="ti ti-eye-off"></i> Ocultar vista previa';
+    }
+
+    function downloadFeed() {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">\n  <title>FinanciApp NTT DATA — Convocatorias activas</title>\n  <updated>${new Date().toISOString()}</updated>\n${GRANTS.filter(g => g.status === 'open').map(g => `  <entry>\n    <title>${g.title}</title>\n    <source>${g.src === 'bdns' ? 'BDNS' : 'EU Funding &amp; Tenders'}</source>\n    <status>${g.status}</status>\n    <deadline>${g.deadline}</deadline>\n    <amount>${g.amount}</amount>\n    <link href="${g.url}"/>\n  </entry>`).join('\n')}\n</feed>`;
+      const blob = new Blob([xml], { type: 'application/atom+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'financiapp_feed.xml';
+      a.click();
+    }
+
+    /* ── ALERTAS ─────────────────────────────────────────────── */
+    function activateAlert() {
+      const email = document.getElementById('a-email').value;
+      if (!email || !email.includes('@')) {
+        document.getElementById('a-email').focus();
+        return;
+      }
+      document.getElementById('alert-confirm').style.display = 'block';
+    }
+
+    /* ── INIT ────────────────────────────────────────────────── */
+    document.getElementById('next-3').disabled = true;
+    document.getElementById('feed-date').textContent = new Date().toISOString();
+    updateTRL(0);
+    buildProgress();
+    document.getElementById('stat-total').textContent = GRANTS.length;
+    document.getElementById('stat-open').textContent = GRANTS.filter(g => g.status === 'open').length;
+  </script>
 </body>
 </html>
